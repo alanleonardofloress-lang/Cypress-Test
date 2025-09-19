@@ -5,6 +5,11 @@ pipeline {
         ansiColor('xterm')   // habilita colores en consola
     }
 
+environment {
+        LC_ALL = 'C.UTF-8'
+        LANG   = 'C.UTF-8'
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -20,7 +25,7 @@ pipeline {
 
         stage('Run Cypress tests') {
             steps {
-                sh 'npx cypress run'
+                sh 'npx cypress run --browser chrome --headless'
             }
         }
     }
