@@ -5,7 +5,7 @@ pipeline {
         ansiColor('xterm')   // habilita colores en consola
     }
 
-environment {
+    environment {
         LC_ALL = 'C.UTF-8'
         LANG   = 'C.UTF-8'
     }
@@ -39,6 +39,11 @@ environment {
         }
         always {
             echo '\u001B[34m📦 Pipeline terminado (éxito o fallo).\u001B[0m'
+
+            // 🔹 Archivar artefactos Cypress en Jenkins
+            archiveArtifacts artifacts: 'cypress/screenshots/**/*.png', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'cypress/videos/**/*.mp4', allowEmptyArchive: true
         }
     }
 }
+
