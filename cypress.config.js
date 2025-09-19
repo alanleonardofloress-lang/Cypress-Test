@@ -9,6 +9,10 @@ module.exports = defineConfig({
     viewportWidth: 1366,
     viewportHeight: 768,
 
+  video: true,  // 🔹 activa la grabación de videos
+  screenshotsFolder: "cypress/screenshots",  // 🔹 dónde guardar capturas
+  videosFolder: "cypress/videos",            // 🔹 dónde guardar videos
+
     setupNodeEvents(on, config) {
       console.log("✅ Cypress cargó el setupNodeEvents correctamente");
 
