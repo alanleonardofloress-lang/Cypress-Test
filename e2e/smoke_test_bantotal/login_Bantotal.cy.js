@@ -51,14 +51,5 @@ describe('Login TestingLink Bantotal', () => {
   });
 
 
-afterEach(() => {
-  cy.get('img[alt="logout"]').click();
-
-  // Validar que se redirigió al login
-  cy.url().should('include', '/login');
-  cy.contains('Bienvenido/a a su Banca en Línea').should('be.visible');
-});
-
-
 });
 

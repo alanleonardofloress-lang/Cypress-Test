@@ -32,7 +32,7 @@ cy.get('.col12.ng-star-inserted > .row', { timeout: 10000 })
 
   // Validar que se redirigió al login
   cy.url().should('include', '/login');
-  cy.contains('Iniciar sesión').should('be.visible');
+  cy.contains('Bienvenido/a a su Banca en Línea').should('be.visible');
 });
 
 });

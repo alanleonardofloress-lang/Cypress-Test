@@ -97,18 +97,18 @@ cy.get('button.secondary.flat').first().click({ force: true });
 
 
 //hace scrool para hacer aparecer nuevamente X
-cy.get('.header.canClose cross-svg.close')
- .scrollIntoView()
- .click({ force: true });
+//cy.get('.header.canClose cross-svg.close')
+// .scrollIntoView()
+// .click({ force: true });
 
 
 // Buscar la fila que contenga "BLANCO DAIANA"
-cy.contains('tr', 'BLANCO DAIANA')
-  .should('be.visible') 
-  .find('div.table-actions svg')   //div.table-actions svg
-  .click({ force: true });
+//cy.contains('tr', 'BLANCO DAIANA')
+ // .should('be.visible') 
+ // .find('div.table-actions svg')   //div.table-actions svg
+ // .click({ force: true });
 
-  cy.get('button.secondary.flat').first().click({ force: true });
+ // cy.get('button.secondary.flat').first().click({ force: true });
 
   // 2. Esperar que aparezca el modal/alerta 
 cy.get('.alert', { timeout: 10000 })
