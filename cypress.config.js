@@ -4,7 +4,7 @@ const sql = require("mssql");
 
 module.exports = defineConfig({
   e2e: {
-    specPattern: "e2e/**/*.cy.js",
+    specPattern: "cypress/e2e/**/*.cy.js",
     supportFile: "support/e2e.js",
     viewportWidth: 1366,
     viewportHeight: 768,
