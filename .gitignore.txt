@@ -4,6 +4,7 @@ node_modules/
 # Archivos de Cypress (videos/screenshots de pruebas)
 cypress/videos/
 cypress/screenshots/
+cypress/downloads/
 
 # Archivos de sistema
 .DS_Store
@@ -13,3 +14,12 @@ Thumbs.db
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Configuración de IDE/Editor
+.vscode/
+.idea/
+
+# Archivos temporales
+*.tmp
+*.swp
+
