@@ -10,6 +10,14 @@ pipeline {
         LANG   = 'C.UTF-8'
     }
 
+    parameters {
+        choice(
+            name: 'TEST_SUITE',
+            choices: ['regression', 'smoke_test_bse'],
+            description: 'Seleccionar suite de Cypress a ejecutar'
+        )
+    }
+
     stages {
         stage('Checkout') {
             steps {
@@ -23,9 +31,9 @@ pipeline {
             }
         }
 
-        stage('Run Cypress tests') {
+        stage('Run Selected Suite') {
             steps {
-                sh 'npx cypress run --browser chrome --headless'
+                sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*\""
             }
         }
     }
@@ -39,8 +47,6 @@ pipeline {
         }
         always {
             echo '\u001B[34m📦 Pipeline terminado (éxito o fallo).\u001B[0m'
-
-            // 🔹 Archivar artefactos Cypress en Jenkins
             archiveArtifacts artifacts: 'cypress/screenshots/**/*.png', allowEmptyArchive: true
             archiveArtifacts artifacts: 'cypress/videos/**/*.mp4', allowEmptyArchive: true
         }
