@@ -25,6 +25,13 @@ pipeline {
             }
         }
 
+stage('List files') {
+    steps {
+        sh 'echo " Contenido de cypress/e2e:"'
+        sh 'ls -R cypress/e2e'
+    }
+}
+
         stage('Install dependencies') {
             steps {
                 sh 'npm install'
