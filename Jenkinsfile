@@ -39,10 +39,11 @@ stage('List files') {
         }
 
         stage('Run Selected Suite') {
-            steps {
-                sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*\""
-            }
-        }
+    steps {
+        sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
+    }
+}
+
     }
 
     post {
