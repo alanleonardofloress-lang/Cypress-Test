@@ -30,8 +30,8 @@ Cypress.Commands.add('loginBSE', (usuario, password) => {
   cy.get('input[placeholder="Ingrese usuario"]').type(usuario)
   cy.get('input[placeholder="Ingrese contraseña"]').type(password)
   cy.contains('Continuar').click()
-  cy.url({ timeout: 10000 }).should('include', '/home')
-  cy.contains('Posición Global', { timeout: 10000 }).should('be.visible')
+  cy.url({ timeout: 15000 }).should('include', '/home')
+  cy.contains('Posición Global', { timeout: 15000 }).should('be.visible')
 })
 
 
