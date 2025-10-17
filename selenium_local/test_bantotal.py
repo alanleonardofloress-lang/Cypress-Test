@@ -32,7 +32,7 @@ from selenium_local.helpers.gx_helpers import (
     intentar_con_reintento,
 )
 
-HEADLESS = False  # Cambiar a True si querés ocultar el navegador
+HEADLESS = True  # Cambiar a True si querés ocultar el navegador
 
 chrome_options = Options()
 
