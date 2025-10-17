@@ -57,23 +57,37 @@ pipeline {
             }
         }
 
-        stage('Ejecutar tests') {
-            steps {
-                script {
-                    if (params.TEST_TYPE == 'CYPRESS') {
-                        echo 'Ejecutando suite de Cypress...'
-                        sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
-                    } else {
-                        echo 'Ejecutando test Selenium...'
-                        bat """
-                            cd %PROJECT_DIR%
-                            %PYTHON_HOME% -m selenium_local.test_bantotal
-                        """
-                    }
-                }
+stage('Ejecutar tests') {
+    steps {
+        script {
+            echo "🧠 TEST_TYPE seleccionado: ${params.TEST_TYPE}"
+
+            if (params.TEST_TYPE == 'CYPRESS') {
+                echo 'Ejecutando suite de Cypress...'
+                sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
+            } else {
+                echo 'Ejecutando test Selenium...'
+                echo "Ruta de Python: ${env.PYTHON_HOME}"
+                echo "Directorio del proyecto: ${env.PROJECT_DIR}"
+
+                // Verificación del entorno Python y Selenium antes del test
+                bat """
+                    echo === Verificando entorno Python ===
+                    %PYTHON_HOME% --version
+                    %PYTHON_HOME% -m pip show selenium
+                """
+
+                // Ejecución del test real
+                bat """
+                    cd %PROJECT_DIR%
+                    echo === INICIO TEST SELENIUM DESDE JENKINS ===
+                    %PYTHON_HOME% -m selenium_local.test_bantotal
+                    echo === FIN TEST SELENIUM DESDE JENKINS ===
+                """
             }
         }
     }
+}
 
     post {
         success {
