@@ -13,6 +13,7 @@ pipeline {
     }
 
     stages {
+
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/alanleonardofloress-lang/Cypress-Test.git'
@@ -42,13 +43,26 @@ pipeline {
         stage('Ejecutar test Selenium') {
             steps {
                 dir('automatizaciones/selenium_project') {
-                    bat '''
-                        echo Ejecutando test Bantotal...
-                        venv\\Scripts\\python.exe selenium_local\\test_bantotal.py > log_bantotal.txt 2>&1
+                    script {
+                        echo "Ejecutando test Bantotal..."
 
-                        echo Fin de ejecución. Revisión de logs:
-                        type log_bantotal.txt
-                    '''
+                        // Ejecutar el test y capturar el código de salida
+                        def result = bat(
+                            script: "${env.PYTHON_EXE} selenium_local\\test_bantotal.py > log_bantotal.txt 2>&1",
+                            returnStatus: true
+                        )
+
+                        // Verificar el resultado del test
+                        if (result != 0) {
+                            echo "El test de Selenium falló con código ${result}. Revisar log_bantotal.txt"
+                            error("El test falló. Ver detalles en el log.")
+                        } else {
+                            echo "Test Selenium ejecutado correctamente."
+                        }
+
+                        // Mostrar log en consola
+                        bat "type log_bantotal.txt"
+                    }
                 }
             }
         }
@@ -63,9 +77,9 @@ pipeline {
         }
         always {
             echo 'Archivando artifacts...'
-            archiveArtifacts artifacts: 'automatizaciones/selenium_project/**/*.png', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'automatizaciones/selenium_project/**/*.log', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'automatizaciones/selenium_project/log_bantotal.txt', allowEmptyArchive: true
+            archiveArtifacts artifacts: '**/selenium_project/**/*.png', allowEmptyArchive: true
+            archiveArtifacts artifacts: '**/selenium_project/**/*.log', allowEmptyArchive: true
+            archiveArtifacts artifacts: '**/selenium_project/log_bantotal.txt', allowEmptyArchive: true
         }
     }
 }
