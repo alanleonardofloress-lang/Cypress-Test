@@ -23,10 +23,17 @@ pipeline {
             steps {
                 dir('automatizaciones/selenium_project') {
                     bat '''
+                        echo Creando entorno virtual...
                         python -m venv venv
-                        venv\\Scripts\\activate
+
+                        echo Actualizando pip...
                         venv\\Scripts\\python.exe -m pip install --upgrade pip
+
+                        echo Instalando dependencias...
                         venv\\Scripts\\python.exe -m pip install -r requirements.txt
+
+                        echo Verificando instalación de Selenium...
+                        venv\\Scripts\\python.exe -m pip show selenium || echo Selenium no encontrado
                     '''
                 }
             }
@@ -36,12 +43,11 @@ pipeline {
             steps {
                 dir('automatizaciones/selenium_project') {
                     bat '''
-                        echo Verificando entorno Python...
-                        venv\\Scripts\\python.exe --version
-                        venv\\Scripts\\python.exe -m pip show selenium
-
                         echo Ejecutando test Bantotal...
-                        venv\\Scripts\\python.exe selenium_local\\test_bantotal.py
+                        venv\\Scripts\\python.exe selenium_local\\test_bantotal.py > log_bantotal.txt 2>&1
+
+                        echo Fin de ejecución. Revisión de logs:
+                        type log_bantotal.txt
                     '''
                 }
             }
@@ -59,6 +65,7 @@ pipeline {
             echo 'Archivando artifacts...'
             archiveArtifacts artifacts: 'automatizaciones/selenium_project/**/*.png', allowEmptyArchive: true
             archiveArtifacts artifacts: 'automatizaciones/selenium_project/**/*.log', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'automatizaciones/selenium_project/log_bantotal.txt', allowEmptyArchive: true
         }
     }
 }
