@@ -418,7 +418,7 @@ def inyectar_cuit(driver, cuit_no_guiones):
 
         val = driver.find_element(By.ID, "vPFNDOC").get_attribute("value")
         logger.info(f"Valor actual en vPFNDOC: {val}")
-        driver.save_screenshot("cuit_inyectado_sin_guiones.png")
+
         return val
 
     except Exception as e:
@@ -1488,7 +1488,7 @@ def seleccionar_tipo_documento_cuit(driver, max_reintentos=2):
 
     # Si llega hasta acá, no logró dejar CUIT seleccionado
     print("No se pudo confirmar la selección de 'C.U.I.T.' después de varios intentos.")
-    driver.save_screenshot("error_tipo_doc_cuit.png")
+
     return False
 
 
@@ -2740,63 +2740,88 @@ def seleccionar_otro_vFSE005COL(driver):
 seleccionar_otro_vFSE005COL(driver)
 
 
-# Ingresar código postal 7166
-def ingresar_codigo_postal(driver):
+# Ingresar código postal 7166 con validación, reintento y reubicación
+
+
+def ingresar_codigo_postal(driver, codigo_postal="7166", max_reintentos=3):
     """
-    Ingresa el código postal 7166 en el campo 'vCODPOS',
-    simulando la interacción natural del usuario (click, input, blur).
+    Ingresa el código postal (por defecto 7166) en el campo 'vCODPOS'.
+    Reintenta si el valor no se aplica correctamente o el campo se recarga.
     """
-    try:
-        codigo_postal = "7166"
-        print(f"Ingresando código postal: {codigo_postal}")
+    print(f"Iniciando ingreso de código postal: {codigo_postal}")
+    intentos = 0
 
-        # Esperar a que el campo esté presente y clickeable
-        campo_cp = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.ID, "vCODPOS"))
-        )
+    while intentos < max_reintentos:
+        try:
+            # Buscar nuevamente el campo en cada intento (por si GeneXus refrescó el DOM)
+            campo_cp = WebDriverWait(driver, 20).until(
+                EC.presence_of_element_located((By.ID, "vCODPOS"))
+            )
+            WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "vCODPOS"))
+            )
+            time.sleep(0.3)
 
-        # Hacer scroll y clic real para activar onfocus()
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", campo_cp
-        )
-        time.sleep(0.3)
-        campo_cp.click()
-        time.sleep(0.3)
+            # Scroll para centrar el campo visible
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'center'});", campo_cp
+            )
+            time.sleep(0.3)
+            campo_cp.click()
+            time.sleep(0.3)
 
-        # Limpiar campo antes de ingresar el valor
-        campo_cp.send_keys(Keys.CONTROL + "a")
-        campo_cp.send_keys(Keys.DELETE)
-        time.sleep(0.3)
+            # Limpiar contenido anterior
+            campo_cp.send_keys(Keys.CONTROL + "a")
+            campo_cp.send_keys(Keys.DELETE)
+            time.sleep(0.2)
 
-        # Ingresar el código postal
-        campo_cp.send_keys(codigo_postal)
-        time.sleep(0.3)
+            # Escribir código postal
+            campo_cp.send_keys(codigo_postal)
+            time.sleep(0.2)
 
-        # Disparar manualmente los eventos GeneXus
-        driver.execute_script(
-            """
-            const el = document.getElementById('vCODPOS');
-            el.dispatchEvent(new Event('change', {bubbles:true}));
-            el.dispatchEvent(new Event('blur', {bubbles:true}));
-            try {
-                if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
-                if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
-            } catch(e) {}
-        """
-        )
+            # Disparar eventos GeneXus (onchange y onblur)
+            driver.execute_script(
+                """
+                const el = document.getElementById('vCODPOS');
+                el.dispatchEvent(new Event('change', {bubbles:true}));
+                el.dispatchEvent(new Event('blur', {bubbles:true}));
+                try {
+                    if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
+                    if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
+                } catch(e) {}
+                """
+            )
 
-        # Validar ingreso final
-        valor_final = campo_cp.get_attribute("value").strip()
-        if valor_final == codigo_postal:
-            print(f"Código postal ingresado correctamente: {valor_final}")
-        else:
-            print(f"Verificar valor. Se leyó: '{valor_final}'")
+            time.sleep(0.6)
 
-    except Exception as e:
-        print(f"Error al ingresar código postal: {e}")
+            # Leer valor final del campo
+            valor_final = campo_cp.get_attribute("value").strip()
+
+            if valor_final == codigo_postal:
+                print(f"Código postal confirmado correctamente: {valor_final}")
+                return True
+            else:
+                print(
+                    f"Valor leído: '{valor_final}'. Reintentando ({intentos+1}/{max_reintentos})..."
+                )
+                intentos += 1
+                time.sleep(1.0)
+
+        except Exception as e:
+            print(f"Error en intento {intentos+1}: {e}")
+            intentos += 1
+            time.sleep(1.0)
+
+    # Si no se pudo confirmar después de varios intentos
+    print(
+        "No se pudo ingresar el código postal correctamente después de varios intentos."
+    )
+    driver.save_screenshot("error_codigo_postal.png")
+    return False
 
 
-# llamar al step: Ingresar código postal 7166
+# Llamar al step
+
 ingresar_codigo_postal(driver)
 
 
@@ -4366,5 +4391,3 @@ def presionar_boton_confirmar(driver):
 
 # Ejecutar el paso
 presionar_boton_confirmar(driver)
-
-input("Presioná ENTER para cerrar el navegador...")
