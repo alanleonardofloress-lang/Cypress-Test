@@ -1,0 +1,64 @@
+pipeline {
+    agent any
+
+    options {
+        ansiColor('xterm')
+    }
+
+    environment {
+        LC_ALL = 'C.UTF-8'
+        LANG   = 'C.UTF-8'
+        PROJECT_DIR = "${WORKSPACE}\\automatizaciones\\selenium_project"
+        PYTHON_EXE = "venv\\Scripts\\python.exe"
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/alanleonardofloress-lang/Cypress-Test.git'
+            }
+        }
+
+        stage('Configurar entorno Python') {
+            steps {
+                dir('automatizaciones/selenium_project') {
+                    bat '''
+                        python -m venv venv
+                        venv\\Scripts\\activate
+                        venv\\Scripts\\python.exe -m pip install --upgrade pip
+                        venv\\Scripts\\python.exe -m pip install -r requirements.txt
+                    '''
+                }
+            }
+        }
+
+        stage('Ejecutar test Selenium') {
+            steps {
+                dir('automatizaciones/selenium_project') {
+                    bat '''
+                        echo Verificando entorno Python...
+                        venv\\Scripts\\python.exe --version
+                        venv\\Scripts\\python.exe -m pip show selenium
+
+                        echo Ejecutando test Bantotal...
+                        venv\\Scripts\\python.exe selenium_local\\test_bantotal.py
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline Selenium finalizado con éxito.'
+        }
+        failure {
+            echo 'Pipeline Selenium falló. Revisar logs.'
+        }
+        always {
+            echo 'Archivando artifacts...'
+            archiveArtifacts artifacts: 'automatizaciones/selenium_project/**/*.png', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'automatizaciones/selenium_project/**/*.log', allowEmptyArchive: true
+        }
+    }
+}

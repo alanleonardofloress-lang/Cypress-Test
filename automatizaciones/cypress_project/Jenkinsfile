@@ -1,0 +1,59 @@
+pipeline {
+    agent any
+
+    options {
+        ansiColor('xterm')
+    }
+
+    environment {
+        LC_ALL = 'C.UTF-8'
+        LANG   = 'C.UTF-8'
+        PROJECT_DIR = "${WORKSPACE}\\automatizaciones\\cypress_project"
+    }
+
+    parameters {
+        choice(
+            name: 'TEST_SUITE',
+            choices: ['regression', 'smoke_test_bse'],
+            description: 'Seleccionar suite de Cypress a ejecutar'
+        )
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'https://github.com/alanleonardofloress-lang/Cypress-Test.git'
+            }
+        }
+
+        stage('Instalar dependencias') {
+            steps {
+                dir('automatizaciones/cypress_project') {
+                    bat 'npm ci'
+                }
+            }
+        }
+
+        stage('Ejecutar tests Cypress') {
+            steps {
+                dir('automatizaciones/cypress_project') {
+                    bat "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline finalizado con éxito.'
+        }
+        failure {
+            echo 'Pipeline falló. Revisar logs.'
+        }
+        always {
+            echo 'Archivando artifacts...'
+            archiveArtifacts artifacts: 'automatizaciones/cypress_project/cypress/screenshots/**/*.png', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'automatizaciones/cypress_project/cypress/videos/**/*.mp4', allowEmptyArchive: true
+        }
+    }
+}
