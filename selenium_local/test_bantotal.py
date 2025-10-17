@@ -1,3 +1,16 @@
+import os
+
+# Detectar si estamos corriendo en Jenkins
+if "JENKINS_HOME" in os.environ:
+    # Ruta persistente fuera del workspace
+    DNI_TRACKER_FILE = os.path.expanduser(
+        r"C:\Users\aflores\.jenkins\dni_tracker_global.txt"
+    )
+else:
+    # Ruta local para cuando se ejecute manualmente desde local
+    DNI_TRACKER_FILE = os.path.join(os.getcwd(), "dni_tracker.txt")
+
+
 # Librerías externas
 import random
 import time
@@ -288,8 +301,19 @@ except Exception as e:
 
 
 # Persistencia del contador
+import os
 
-DNI_TRACKER_FILE = "dni_tracker.txt"
+# Detectar si estamos ejecutando dentro de Jenkins o en entorno local
+if "JENKINS_HOME" in os.environ:
+    # Ruta persistente fuera del workspace (no se borra entre builds)
+    DNI_TRACKER_FILE = os.path.expanduser(
+        r"C:\Users\aflores\.jenkins\dni_tracker_global.txt"
+    )
+else:
+    # Ruta local por defecto (cuando se ejecuta manualmente)
+    DNI_TRACKER_FILE = os.path.join(os.getcwd(), "dni_tracker.txt")
+
+print(f"Usando archivo de seguimiento: {DNI_TRACKER_FILE}")
 
 
 def cargar_dni_actual(default=10000000):
