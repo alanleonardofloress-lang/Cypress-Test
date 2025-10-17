@@ -1,5 +1,8 @@
 # Librerías externas
+# Ajuste de path para ejecución en Jenkins
+import os
 import random
+import sys
 import time
 from datetime import datetime, timedelta
 
@@ -16,6 +19,10 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
+
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+
 
 # Librerías locales (tu código)
 from selenium_local.helpers import (
