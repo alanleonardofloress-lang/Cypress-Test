@@ -9,7 +9,7 @@ pipeline {
         LC_ALL = 'C.UTF-8'
         LANG   = 'C.UTF-8'
         PYTHON_HOME = 'C:\\Users\\aflores\\mi-proyecto-cypress\\venv\\Scripts\\python.exe'
-        PROJECT_DIR = 'C:\\Users\\aflores\\mi-proyecto-cypress'
+        PROJECT_DIR = "${WORKSPACE}"
     }
 
     parameters {
@@ -42,7 +42,7 @@ pipeline {
         stage('Instalar dependencias') {
             steps {
                 script {
-                    if (params.TEST_TYPE == 'CYPRESS') {
+                    if (params.TEST_TYPE.equalsIgnoreCase('CYPRESS')) {
                         echo 'Instalando dependencias de Cypress...'
                         sh 'npm install'
                     } else {
@@ -57,49 +57,44 @@ pipeline {
             }
         }
 
-stage('Ejecutar tests') {
-    steps {
-        script {
-            echo "🧠 TEST_TYPE seleccionado: ${params.TEST_TYPE}"
+        stage('Ejecutar tests') {
+            steps {
+                script {
+                    if (params.TEST_TYPE.equalsIgnoreCase('CYPRESS')) {
+                        echo 'Ejecutando suite de Cypress...'
+                        sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
+                    } else {
+                        echo 'Ejecutando test Selenium...'
+                        echo "Ruta de Python: ${env.PYTHON_HOME}"
+                        echo "Workspace actual: ${env.WORKSPACE}"
 
-            if (params.TEST_TYPE == 'CYPRESS') {
-                echo 'Ejecutando suite de Cypress...'
-                sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
-            } else {
-                echo 'Ejecutando test Selenium...'
-                echo "Ruta de Python: ${env.PYTHON_HOME}"
-                echo "Directorio del proyecto: ${env.PROJECT_DIR}"
-
-                // Verificación del entorno Python y Selenium antes del test
-                bat """
-                    echo === Verificando entorno Python ===
-                    %PYTHON_HOME% --version
-                    %PYTHON_HOME% -m pip show selenium
-                """
-
-                // Ejecución del test real
-                bat """
-                    cd %PROJECT_DIR%
-                    echo === INICIO TEST SELENIUM DESDE JENKINS ===
-                    %PYTHON_HOME% -m selenium_local.test_bantotal
-                    echo === FIN TEST SELENIUM DESDE JENKINS ===
-                """
+                        bat """
+                            echo === Verificando entorno Python ===
+                            %PYTHON_HOME% --version
+                            %PYTHON_HOME% -m pip show selenium
+                            echo === Ejecutando test Bantotal ===
+                            cd %PROJECT_DIR%
+                            %PYTHON_HOME% -m selenium_local.test_bantotal
+                        """
+                    }
+                }
             }
         }
     }
-}
 
     post {
         success {
-            echo '\u001B[32m✅ Pipeline finalizado con éxito!\u001B[0m'
+            echo 'Pipeline finalizado con éxito.'
         }
         failure {
-            echo '\u001B[31m❌ Pipeline falló. Revisar logs.\u001B[0m'
+            echo 'Pipeline falló. Revisar logs.'
         }
         always {
-            echo '\u001B[34m📦 Pipeline terminado (éxito o fallo).\u001B[0m'
+            echo 'Pipeline terminado (éxito o fallo).'
             archiveArtifacts artifacts: 'cypress/screenshots/**/*.png', allowEmptyArchive: true
             archiveArtifacts artifacts: 'cypress/videos/**/*.mp4', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'selenium_local/**/*.png', allowEmptyArchive: true
+            archiveArtifacts artifacts: 'selenium_local/**/*.log', allowEmptyArchive: true
         }
     }
 }
