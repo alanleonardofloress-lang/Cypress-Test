@@ -39,7 +39,7 @@ from selenium_local.helpers.gx_helpers import (
     intentar_con_reintento,
 )
 
-HEADLESS = True  # Cambiar a True si querés ocultar el navegador
+HEADLESS = False  # Cambiar a True si querés ocultar el navegador
 
 chrome_options = Options()
 
@@ -112,7 +112,7 @@ try:
                 time.sleep(2)
             else:
                 print("No se pudo validar las credenciales tras varios intentos.")
-                driver.save_screenshot("error_credenciales.png")
+
                 raise
 
     # Clic en botón iniciar sesión
@@ -226,11 +226,10 @@ try:
         agregar_btn,
     )
     print("Click en botón 'Agregar' realizado correctamente")
-    driver.save_screenshot("post_click_agregar.png")
+
 
 except Exception as e:
     print(f"Error inesperado: {e}")
-    driver.save_screenshot("error_debug.png")
 
 # Volver al frame principal
 driver.switch_to.default_content()
@@ -291,50 +290,79 @@ try:
     print("Tipo de documento seleccionado: C.U.I.T.")
 except Exception as e:
     print(f"Error al seleccionar tipo de documento: {e}")
-    driver.save_screenshot("error_cuit.png")
 
 
-# Persistencia del contador
+import logging
 
-DNI_TRACKER_FILE = "dni_tracker.txt"
+# --------------------------------------------------------------------
+# CONFIGURACIÓN DE BASE LOCAL
+# --------------------------------------------------------------------
+import os
+import sqlite3
+import time
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
+
+# Ruta compartida de la base de datos SQLite
+DB_PATH = r"C:\Users\aflores\.jenkins\Compartida_con_test_bantotal\dni_tracker.db"
+
+# Crea la carpeta si no existe (evita errores en Jenkins limpio)
+os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+
+# Logging (muestra en consola y Jenkins)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+
+print(f"Usando base de datos en: {DB_PATH}")
+logger.info(f"Base de datos SQLite activa en: {DB_PATH}")
 
 
-def cargar_dni_actual(default=10000000):
+def inicializar_db():
+    """Crea la base y la tabla tracker si no existen."""
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tracker (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            dni_actual INTEGER NOT NULL
+        )
     """
-    Carga el dni_actual desde archivo. Si no existe, devuelve default.
-    """
-    try:
-        with open(DNI_TRACKER_FILE, "r") as f:
-            val = int(f.read().strip())
-            print(f"Cargando dni_actual desde {DNI_TRACKER_FILE}: {val}")
-            return val
-    except Exception:
-        print(f"No se encontró {DNI_TRACKER_FILE}, usando valor por defecto {default}")
-        return default
+    )
+    # Valor inicial del contador
+    cur.execute("INSERT OR IGNORE INTO tracker (id, dni_actual) VALUES (1, 10000250)")
+    conn.commit()
+    conn.close()
 
 
-def guardar_dni_actual(dni_actual):
-    """
-    Guarda el dni_actual en archivo para persistir entre ejecuciones.
-    """
-    try:
-        with open(DNI_TRACKER_FILE, "w") as f:
-            f.write(str(dni_actual))
-        print(f"dni_actual guardado en {DNI_TRACKER_FILE}: {dni_actual}")
-    except Exception as e:
-        print("Error guardando dni_tracker:", e)
+def obtener_y_incrementar_dni():
+    """Obtiene el DNI actual y lo incrementa de forma atómica."""
+    conn = sqlite3.connect(DB_PATH, isolation_level="EXCLUSIVE")
+    cur = conn.cursor()
+    cur.execute("BEGIN EXCLUSIVE TRANSACTION")
+    cur.execute("SELECT dni_actual FROM tracker WHERE id = 1")
+    row = cur.fetchone()
+    if not row:
+        raise RuntimeError("No se encontró registro en tracker")
 
+    dni_actual = row[0]
+    nuevo_valor = dni_actual + 1
+    cur.execute("UPDATE tracker SET dni_actual = ? WHERE id = 1", (nuevo_valor,))
+    conn.commit()
+    conn.close()
 
-# Cálculo del CUIT (DV)
+    logger.info(f"DNI obtenido: {dni_actual} → incrementado a {nuevo_valor}")
+    return dni_actual
 
 
 def calcular_cuit_sin_guiones(prefijo, dni):
-    """
-    Devuelve CUIT sin guiones: PREF(2) + DNI(8) + DV(1) -> 11 dígitos
-    """
+    """Devuelve CUIT sin guiones: PREF(2) + DNI(8) + DV(1)."""
     pref = int(prefijo)
     dni_int = int(dni)
-    cuerpo = f"{pref:02d}{dni_int:08d}"  # 10 dígitos
+    cuerpo = f"{pref:02d}{dni_int:08d}"
     pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
     total = sum(int(d) * w for d, w in zip(cuerpo, pesos))
     resto = total % 11
@@ -346,91 +374,79 @@ def calcular_cuit_sin_guiones(prefijo, dni):
     return f"{cuerpo}{dv}"
 
 
-# Generador secuencial
-
-# Cargar contador al inicio
-dni_actual = cargar_dni_actual(default=10000000)
-
-
 def generar_cuit_secuencial(socio="Varones"):
-    """
-    Genera CUIT secuencial y único (usa dni_actual, lo incrementa).
-    Retorna (cuit_sin_guiones, pref, dni_usado).
-    """
-    global dni_actual
+    """Genera un CUIT secuencial único usando la DB local."""
     pref_map = {"Varones": 20, "Mujeres": 27, "Extranjeros": 23}
     pref = pref_map.get(socio, 20)
-
-    # Generar CUIT con el dni_actual y luego incrementar el contador
-    cuit = calcular_cuit_sin_guiones(pref, dni_actual)
-    dni_usado = dni_actual
-    dni_actual += 1
-    print(f"CUIT secuencial generado: {cuit} (DNI: {dni_usado}, pref: {pref})")
-    # NOTA: llamar a guardar_dni_actual() al final del flujo principal para persistir
+    dni_usado = obtener_y_incrementar_dni()
+    cuit = calcular_cuit_sin_guiones(pref, dni_usado)
+    logger.info(f"CUIT generado: {cuit} (DNI: {dni_usado}, prefijo: {pref})")
     return cuit, pref, dni_usado
 
 
-# Inyección en el campo vPFNDOC
+def inyectar_cuit(driver, cuit_no_guiones):
+    """Inyecta el CUIT en el campo vPFNDOC con disparo de eventos GeneXus."""
+    try:
+        pfndoc = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.ID, "vPFNDOC"))
+        )
 
+        driver.execute_script(
+            "arguments[0].scrollIntoView({block:'center'}); arguments[0].focus();",
+            pfndoc,
+        )
+        time.sleep(0.2)
+
+        pfndoc.clear()
+        pfndoc.send_keys(cuit_no_guiones)
+        time.sleep(0.2)
+
+        # Disparar eventos GX
+        driver.execute_script(
+            """
+            var el = arguments[0];
+            el.dispatchEvent(new Event('input', {bubbles:true}));
+            el.dispatchEvent(new Event('change', {bubbles:true}));
+            el.dispatchEvent(new Event('blur', {bubbles:true}));
+        """,
+            pfndoc,
+        )
+        driver.execute_script(
+            """
+            var el = arguments[0];
+            try { if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event); } catch(e) {}
+            try { if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event); } catch(e) {}
+        """,
+            pfndoc,
+        )
+
+        pfndoc.send_keys(Keys.TAB)
+        time.sleep(0.5)
+
+        val = driver.find_element(By.ID, "vPFNDOC").get_attribute("value")
+        logger.info(f"Valor actual en vPFNDOC: {val}")
+        driver.save_screenshot("cuit_inyectado_sin_guiones.png")
+        return val
+
+    except Exception as e:
+        logger.error(f"Error al inyectar CUIT: {e}")
+        driver.save_screenshot("error_inyectar_cuit.png")
+        raise
+
+
+# --------------------------------------------------------------------
+# USO PRINCIPAL
+# --------------------------------------------------------------------
 try:
-    # Generar CUIT secuencial en lugar de aleatorio
+    inicializar_db()
     cuit_no_guiones, pref, dni_generado = generar_cuit_secuencial("Varones")
     print(
         f"Generado CUIT (sin guiones): {cuit_no_guiones}  (DNI: {dni_generado}, pref: {pref})"
     )
-
-    # Inyectar en el campo vPFNDOC (tu bloque original con ligera tolerancia)
-    pfndoc = WebDriverWait(driver, 20).until(
-        EC.presence_of_element_located((By.ID, "vPFNDOC"))
-    )
-
-    # scroll + focus
-    driver.execute_script(
-        "arguments[0].scrollIntoView({block:'center'}); arguments[0].focus();", pfndoc
-    )
-    time.sleep(0.2)
-
-    # limpiar e ingresar el CUIT sin guiones
-    pfndoc.clear()
-    pfndoc.send_keys(cuit_no_guiones)
-    time.sleep(0.2)
-
-    # disparar eventos nativos y GeneXus
-    driver.execute_script(
-        """
-        var el = arguments[0];
-        el.dispatchEvent(new Event('input', {bubbles:true}));
-        el.dispatchEvent(new Event('change', {bubbles:true}));
-        el.dispatchEvent(new Event('blur', {bubbles:true}));
-    """,
-        pfndoc,
-    )
-
-    # intentar llamar a handlers de GeneXus (si existen)
-    driver.execute_script(
-        """
-        var el = arguments[0];
-        try { if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event); } catch(e) {}
-        try { if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event); } catch(e) {}
-    """,
-        pfndoc,
-    )
-
-    # enviar TAB para forzar blur/validación
-    pfndoc.send_keys(Keys.TAB)
-    time.sleep(0.5)
-
-    # validar (releer el valor que dejó el sistema)
-    val = driver.find_element(By.ID, "vPFNDOC").get_attribute("value")
-    print("Valor actual en vPFNDOC:", val)
-    driver.save_screenshot("cuit_inyectado_sin_guiones.png")
-
-    # Al final del proceso (si todo OK) guardar el nuevo dni_actual para persistencia entre runs
-    guardar_dni_actual(dni_actual)
-
-except Exception as e:
-    print("Error al generar/inyectar CUIT:", e)
-    driver.save_screenshot("error_inyectar_cuit.png")
+    valor_final = inyectar_cuit(driver, cuit_no_guiones)
+    print("Valor final en campo:", valor_final)
+except Exception:
+    logger.exception("Error general en generación/inyección de CUIT:")
 
 
 # Seleccionar tipo de alta
@@ -444,7 +460,6 @@ try:
     print("Tipo de alta seleccionado: Normal")
 except Exception as e:
     print(f"Error al seleccionar tipo de alta: {e}")
-    driver.save_screenshot("error_tipo_alta.png")
 
 
 # Seleccionar canal de origen
@@ -458,7 +473,6 @@ try:
     print("Canal de origen seleccionado: Sucursal (value=1)")
 except Exception as e:
     print(f"Error al seleccionar canal de origen: {e}")
-    driver.save_screenshot("error_canal_origen.png")
 
 
 # Seleccionar categoría comercial
@@ -473,7 +487,6 @@ try:
     print("Categoría seleccionada: Comercial (value='S')")
 except Exception as e:
     print(f"Error al seleccionar categoría comercial: {e}")
-    driver.save_screenshot("error_categoria_comercial.png")
 
 
 # Seleccionar tipo de persona
@@ -488,7 +501,6 @@ try:
     print("Tipo de persona seleccionado: Física (value='F')")
 except Exception as e:
     print(f"Error al seleccionar tipo de persona: {e}")
-    driver.save_screenshot("error_tipo_persona.png")
 
 
 # Confirmar alta
@@ -524,11 +536,9 @@ try:
         )
         print("Click forzado por JavaScript en 'Confirmar' ejecutado correctamente.")
 
-    driver.save_screenshot("post_click_confirmar.png")
 
 except Exception as e:
     print(f"Error al hacer clic en Confirmar: {e}")
-    driver.save_screenshot("error_click_confirmar.png")
 
 
 # Confirmar acción final (clic en "Sí")
@@ -562,11 +572,9 @@ try:
         )
         print("Click forzado por JavaScript en 'Sí' ejecutado correctamente.")
 
-    driver.save_screenshot("post_click_si.png")
 
 except Exception as e:
     print(f"Error al hacer clic en 'Sí': {e}")
-    driver.save_screenshot("error_click_si.png")
 
 
 # Rebuscar específicamente el iframe process1_step3
@@ -625,7 +633,6 @@ try:
     print(f"Campo 'Primer Apellido' completado: {primer_apellido}")
 except Exception as e:
     print(f"Error al completar 'Primer Apellido': {e}")
-    driver.save_screenshot("error_apellido.png")
 
 # Ingresar Segundo Apellido
 print("Ingresando 'Segundo Apellido'...")
@@ -638,7 +645,6 @@ try:
     print(f"Campo 'Segundo Apellido' completado: {segundo_apellido}")
 except Exception as e:
     print(f"Error al completar 'Segundo Apellido': {e}")
-    driver.save_screenshot("error_apellido2.png")
 
 # Ingresar Primer Nombre
 print("Ingresando 'Primer Nombre'...")
@@ -651,7 +657,6 @@ try:
     print(f"Campo 'Primer Nombre' completado: {primer_nombre}")
 except Exception as e:
     print(f"Error al completar 'Primer Nombre': {e}")
-    driver.save_screenshot("error_nombre1.png")
 
 # Ingresar Segundo Nombre
 print("Ingresando 'Segundo Nombre'...")
@@ -664,7 +669,6 @@ try:
     print(f"Campo 'Segundo Nombre' completado: {segundo_nombre}")
 except Exception as e:
     print(f"Error al completar 'Segundo Nombre': {e}")
-    driver.save_screenshot("error_nombre2.png")
 
 
 # tabular para entrar al campo fecha de nacimiento
@@ -675,7 +679,6 @@ def tabular_una_vez(driver):
         print("TAB enviado correctamente.")
     except Exception as e:
         print(f"Error al enviar TAB: {e}")
-        driver.save_screenshot("error_tabular.png")
 
 
 # generar fecha aleatoria mayor a 20 años
@@ -715,7 +718,6 @@ def ingresar_fecha_nacimiento(driver):
 
     except Exception as e:
         print(f"Error al ingresar fecha: {e}")
-        driver.save_screenshot("error_ingresar_fecha.png")
 
 
 # Llamada a las funciones
@@ -749,7 +751,6 @@ try:
     print("Email ingresado correctamente.")
 except Exception as e:
     print(f"Error al completar el email: {e}")
-    driver.save_screenshot("error_email.png")
 
 
 # Seleccionar sexo aleatorio con reintento
@@ -768,7 +769,6 @@ def seleccionar_sexo(driver):
         print(f"Sexo seleccionado correctamente: {sexo_random}")
     except Exception as e:
         print(f"Error al seleccionar sexo: {e}")
-        driver.save_screenshot("error_sexo.png")
         raise e  # Importante: relanzar para que el reintento funcione
 
 
@@ -807,7 +807,6 @@ try:
     print("País de nacimiento 'Argentina' seleccionado correctamente.")
 except Exception as e:
     print(f"Error al seleccionar país de nacimiento: {e}")
-    driver.save_screenshot("error_pais_nacimiento.png")
 
 
 #  Seleccionar estado civil
@@ -1055,7 +1054,6 @@ def ingresar_cuit_empleadora(driver):
         print("CUIT ingresado correctamente.")
     except Exception as e:
         print(f"Error al ingresar CUIT: {e}")
-        driver.save_screenshot("error_cuit_empleadora.png")
 
 
 # Verificador
@@ -1092,7 +1090,6 @@ def hacer_click_confirmar(driver):
         print("Botón Confirmar clickeado correctamente.")
     except Exception as e:
         print(f"Error al hacer clic en Confirmar: {e}")
-        driver.save_screenshot("error_click_confirmar.png")
 
 
 hacer_click_confirmar(driver)
@@ -1171,7 +1168,6 @@ def seleccionar_nacionalidad_no(driver, wait):
 
     except Exception as e:
         print(f"Error al seleccionar nacionalidad: {e}")
-        driver.save_screenshot("error_nacionalidad_no.png")
 
 
 seleccionar_nacionalidad_no(driver, wait)
@@ -1228,7 +1224,6 @@ def seleccionar_residencia_no(driver, wait):
 
     except Exception as e:
         print(f"Error al seleccionar residencia: {e}")
-        driver.save_screenshot("error_residencia_no.png")
 
 
 seleccionar_residencia_no(driver, wait)
@@ -1264,7 +1259,6 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar Confirmar: {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
 
 # llamar al step: Presionar botón Confirmar
@@ -1339,7 +1333,6 @@ def presionar_boton_agregar(driver):
 
     except Exception as e:
         print(f"Error al presionar Agregar: {e}")
-        driver.save_screenshot("error_boton_agregar.png")
 
 
 # llamar al step: Presionar botón Agregar
@@ -1435,7 +1428,6 @@ def seleccionar_pais_uruguay(driver):
 
     except Exception as e:
         print(f"Error al seleccionar país URUGUAY: {e}")
-        driver.save_screenshot("error_pais_uruguay.png")
 
 
 # llamar al step: Seleccionar país URUGUAY
@@ -1477,7 +1469,6 @@ def seleccionar_tipo_documento_cuit(driver):
 
     except Exception as e:
         print(f"Error al seleccionar tipo de documento: {e}")
-        driver.save_screenshot("error_tipo_documento.png")
 
 
 # llamar al step: Seleccionar tipo de documento CUIT
@@ -1563,7 +1554,6 @@ def ingresar_cuit(driver):
 
     except Exception as e:
         print(f"Error al ingresar CUIT: {e}")
-        driver.save_screenshot("error_cuit_ingreso.png")
         return None
 
 
@@ -1628,7 +1618,6 @@ def ingresar_fecha_vencimiento_vDOCFCHVTO(driver):
 
     except Exception as e:
         print(f"Error al ingresar fecha de vencimiento: {e}")
-        driver.save_screenshot("error_ingresar_fecha_vencimiento.png")
         return None
 
 
@@ -1673,7 +1662,6 @@ def presionar_boton_confirmar_vDOCFCHVTO(driver):
 
     except Exception as e:
         print(f"Error al presionar Confirmar: {e}")
-        driver.save_screenshot("error_boton_confirmar_vDOCFCHVTO.png")
 
 
 # Detectar mensaje de documento duplicado
@@ -1725,18 +1713,15 @@ def flujo_cuit_y_fecha_con_reintento(driver, max_reintentos=3):
         # Verificar mensaje de duplicado
         if verificar_mensaje_documento_duplicado(driver):
             print("Documento duplicado. Reintentando con nuevos datos...")
-            driver.save_screenshot(f"duplicado_intento_{intento}.png")
             time.sleep(1)
             continue
         else:
             print("Operación confirmada correctamente (sin duplicado).")
-            driver.save_screenshot(f"exito_intento_{intento}.png")
             return cuit_generado, fecha_vencimiento
 
     print(
         "No se pudo completar la operación: todos los intentos resultaron duplicados."
     )
-    driver.save_screenshot("error_reintentos_cuit_fecha.png")
     return None, None
 
 
@@ -1826,7 +1811,6 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar botón Confirmar: {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
 
 # llamar al step: Presionar botón Confirmar
@@ -1909,7 +1893,6 @@ def presionar_boton_continuar(driver):
 
     except Exception as e:
         print(f"Error al presionar botón Continuar: {e}")
-        driver.save_screenshot("error_boton_continuar.png")
 
 
 # llamar al step: Presionar botón Continuar
@@ -1998,7 +1981,6 @@ def presionar_boton_confirmar_openter(driver):
 
     except Exception as e:
         print(f"Error al presionar botón Confirmar (OpEnterText): {e}")
-        driver.save_screenshot("error_boton_confirmar_openter.png")
 
 
 # llamar al step: Presionar botón Confirmar
@@ -2161,7 +2143,6 @@ def presionar_boton_agregar_domicilio(driver):
 
     except Exception as e:
         print(f"Error al presionar botón 'Agregar' dentro del iframe 12: {e}")
-        driver.save_screenshot("error_boton_agregar_domicilio_iframe12.png")
 
 
 # Ejecutar el paso
@@ -2280,7 +2261,6 @@ def ingresar_nombre_avenida(driver):
 
     except Exception as e:
         print(f"Error al ingresar nombre de avenida: {e}")
-        driver.save_screenshot("error_ingresar_nombre_avenida.png")
 
 
 # llamar al step: Ingresar un nombre de avenida aleatorio
@@ -2342,7 +2322,6 @@ def ingresar_numero_altura(driver):
 
     except Exception as e:
         print(f"Error al ingresar número de altura: {e}")
-        driver.save_screenshot("error_ingresar_numero_altura.png")
 
 
 # llamar al step: Ingresar número aleatorio de 4 dígitos (altura de la avenida)
@@ -2401,7 +2380,6 @@ def ingresar_valor_uno_vNOM3(driver):
 
     except Exception as e:
         print(f"Error al ingresar valor en vNOM3: {e}")
-        driver.save_screenshot("error_ingresar_valor_vNOM3.png")
 
 
 # llamar al step: Ingresar valor 1 en el campo vNOM3
@@ -2458,7 +2436,6 @@ def ingresar_valor_202_vNOM4(driver):
 
     except Exception as e:
         print(f"Error al ingresar valor en vNOM4: {e}")
-        driver.save_screenshot("error_ingresar_valor_vNOM4.png")
 
 
 # llamar al step: Ingresar valor 202 en el campo vNOM4
@@ -2515,7 +2492,6 @@ def ingresar_valor_uno_vNOM5(driver):
 
     except Exception as e:
         print(f"Error al ingresar valor en vNOM5: {e}")
-        driver.save_screenshot("error_ingresar_valor_vNOM5.png")
 
 
 # llamar al step: Ingresar valor 1 en el campo vNOM5
@@ -2572,7 +2548,6 @@ def ingresar_valor_uno_vNOM6(driver):
 
     except Exception as e:
         print(f"Error al ingresar valor en vNOM6: {e}")
-        driver.save_screenshot("error_ingresar_valor_vNOM6.png")
 
 
 # llamar al step: Ingresar valor 1 en el campo vNOM6
@@ -2628,7 +2603,6 @@ def seleccionar_provincia_buenos_aires(driver):
 
     except Exception as e:
         print(f"Error al seleccionar provincia BUENOS AIRES: {e}")
-        driver.save_screenshot("error_seleccionar_provincia_buenos_aires.png")
 
 
 # llamar al step: Seleccionar provincia BUENOS AIRES
@@ -2684,7 +2658,6 @@ def seleccionar_localidad_valeria_del_mar(driver):
 
     except Exception as e:
         print(f"Error al seleccionar localidad VALERIA DEL MAR: {e}")
-        driver.save_screenshot("error_seleccionar_localidad_valeria_del_mar.png")
 
 
 # llamar al step: Seleccionar localidad VALERIA DEL MAR
@@ -2740,7 +2713,6 @@ def seleccionar_otro_vFSE005COL(driver):
 
     except Exception as e:
         print(f"Error al seleccionar opción 'OTRO' en vFSE005COL: {e}")
-        driver.save_screenshot("error_seleccionar_otro_vFSE005COL.png")
 
 
 # llamar al step: Seleccionar opción "OTRO"
@@ -2801,7 +2773,6 @@ def ingresar_codigo_postal(driver):
 
     except Exception as e:
         print(f"Error al ingresar código postal: {e}")
-        driver.save_screenshot("error_ingresar_codigo_postal.png")
 
 
 # llamar al step: Ingresar código postal 7166
@@ -2845,7 +2816,6 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Confirmar': {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
 
 # Ejecutar el paso
@@ -2987,7 +2957,6 @@ def seleccionar_registro_particular_social(driver, forzar_evento=False):
 
     except Exception as e:
         print(f"Error al seleccionar registro 'Particular/Social': {e}")
-        driver.save_screenshot("error_seleccionar_registro_particular_social.png")
 
 
 # Ejecutar el paso (sin forzar evento)
@@ -3135,7 +3104,6 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
         print("Paso 'Teléfonos' procesado.")
     except Exception as e:
         print(f"Error al presionar 'Teléfonos': {e}")
-        driver.save_screenshot("error_boton_telefonos.png")
 
 
 # Ejecutar el paso
@@ -3293,7 +3261,6 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
 
     # Si agotó reintentos:
     driver.switch_to.default_content()
-    driver.save_screenshot("error_boton_agregar.png")
     print(
         "No se pudo abrir el formulario de Alta ('process1_step16'). Evidencia: error_boton_agregar.png"
     )
@@ -3311,7 +3278,7 @@ def ingresar_prefijo_aux(driver, valor="11", intentos=3):
     Incluye reintento y disparo de eventos GeneXus (focus/change/blur).
     """
 
-    print(f"⌨Intentando ingresar '{valor}' en el campo vPREFIJOAUX...")
+    print(f"Intentando ingresar '{valor}' en el campo vPREFIJOAUX...")
 
     for intento in range(1, intentos + 1):
         try:
@@ -3366,7 +3333,6 @@ def ingresar_prefijo_aux(driver, valor="11", intentos=3):
             time.sleep(1)
 
     print("No se pudo ingresar el valor tras múltiples intentos.")
-    driver.save_screenshot("error_ingresar_prefijo_aux.png")
 
 
 # Ejecutar el paso
@@ -3432,7 +3398,6 @@ def ingresar_telefono_aux(driver, valor="12345678", intentos=3):
             time.sleep(1)
 
     print("No se pudo ingresar el número tras múltiples intentos.")
-    driver.save_screenshot("error_ingresar_telefono_aux.png")
 
 
 # Ejecutar el paso
@@ -3501,7 +3466,6 @@ def ingresar_dotlexp(driver, valor="1", intentos=3):
             time.sleep(1)
 
     print("No se pudo ingresar el valor tras múltiples intentos.")
-    driver.save_screenshot("error_ingresar_dotlexp.png")
 
 
 # Ejecutar el paso
@@ -3573,7 +3537,6 @@ def ingresar_dofaxp(driver, valor="AUTOMATION", intentos=3):
             time.sleep(1)
 
     print("No se pudo ingresar el texto tras múltiples intentos.")
-    driver.save_screenshot("error_ingresar_dofaxp.png")
 
 
 # Ejecutar el paso
@@ -3639,10 +3602,8 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Confirmar': {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
     finally:
-        driver.save_screenshot("click_boton_confirmar.png")
         print("Captura guardada como click_boton_confirmar.png")
 
 
@@ -3730,10 +3691,8 @@ def presionar_boton_si(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Sí': {e}")
-        driver.save_screenshot("error_boton_si.png")
 
     finally:
-        driver.save_screenshot("click_boton_si.png")
         print("Captura guardada como click_boton_si.png")
 
 
@@ -3823,10 +3782,8 @@ def presionar_boton_finalizar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Finalizar': {e}")
-        driver.save_screenshot("error_boton_finalizar.png")
 
     finally:
-        driver.save_screenshot("click_boton_finalizar.png")
         print("Captura guardada como click_boton_finalizar.png")
 
 
@@ -3917,10 +3874,8 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Confirmar': {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
     finally:
-        driver.save_screenshot("click_boton_confirmar.png")
         print("Captura guardada como click_boton_confirmar.png")
 
 
@@ -4014,10 +3969,8 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Confirmar': {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
     finally:
-        driver.save_screenshot("click_boton_confirmar.png")
         print("Captura guardada como click_boton_confirmar.png")
 
 
@@ -4132,9 +4085,7 @@ def presionar_boton_si_en_step20(driver):
 
     except Exception as e:
         print(f"Error al presionar 'Sí' (BTNOPSI): {e}")
-        driver.save_screenshot("error_boton_si_step20.png")
     finally:
-        driver.save_screenshot("click_boton_si_step20.png")
         print("Captura guardada como click_boton_si_step20.png")
 
 
@@ -4218,7 +4169,6 @@ def obtener_datos_cuenta_y_documento(driver):
 
     except Exception as e:
         print(f"Error al obtener datos de cuenta/documento: {e}")
-        driver.save_screenshot("error_obtener_datos_cuenta.png")
         return None, None
 
 
@@ -4285,10 +4235,8 @@ def presionar_boton_finalizar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Finalizar': {e}")
-        driver.save_screenshot("error_boton_finalizar.png")
 
     finally:
-        driver.save_screenshot("click_boton_finalizar.png")
         print("Captura guardada como click_boton_finalizar.png")
 
 
@@ -4390,10 +4338,8 @@ def presionar_boton_confirmar(driver):
 
     except Exception as e:
         print(f"Error al presionar el botón 'Confirmar': {e}")
-        driver.save_screenshot("error_boton_confirmar.png")
 
     finally:
-        driver.save_screenshot("click_boton_confirmar.png")
         print("Captura guardada como click_boton_confirmar FINALIZO EL FLUJO OK.png")
 
 
