@@ -1,4 +1,11 @@
 describe('Transferencia a tercero', () => {
+
+ // logout
+     afterEach(() => {
+    cy.get('img[alt="logout"]').click();
+  });
+
+
   it('Realizar una transferencia a tercero', () => {
 
     //  Login 
@@ -18,7 +25,7 @@ describe('Transferencia a tercero', () => {
 
 
    // esperar a que aparezca la lista
-   cy.get(':nth-child(1) > .account',{ timeout: 10000 })
+   cy.get(':nth-child(2) > .account',{ timeout: 10000 })
    .should('have.length.greaterThan', 0)  // confirma que hay cuentas
    .first()
    .click();

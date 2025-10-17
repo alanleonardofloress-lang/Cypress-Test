@@ -18,9 +18,9 @@ describe('Emitir ECHEQ', () => {
 
 
    // hacer clic en el submenú "Emisión de eCheq"
- cy.get(':nth-child(2) > :nth-child(4) > .not-styled > p', { timeout: 10000 })
-  .should('be.visible')
-  .click();
+   cy.get(':nth-child(2) > :nth-child(4) > .not-styled > p', { timeout: 10000 })
+   .should('be.visible')
+   .click();
 
 
   // desplegar el select de cuentas
@@ -100,14 +100,6 @@ describe('Emitir ECHEQ', () => {
     // verificar la pantalla de emisios de echeq
     cy.get('.operation-type > .gray', { timeout: 10000 })
     .should('contain.text', 'Operación finalizada con éxito');
-
-
- 
-
-
-
-
-
 
 
 
