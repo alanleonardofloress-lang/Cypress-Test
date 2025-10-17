@@ -39,7 +39,7 @@ from selenium_local.helpers.gx_helpers import (
     intentar_con_reintento,
 )
 
-HEADLESS = False  # Cambiar a True si querés ocultar el navegador
+HEADLESS = True  # Cambiar a True si querés ocultar el navegador
 
 chrome_options = Options()
 
@@ -293,18 +293,11 @@ except Exception as e:
 
 
 import logging
-
-# --------------------------------------------------------------------
-# CONFIGURACIÓN DE BASE LOCAL
-# --------------------------------------------------------------------
 import os
 import sqlite3
-import time
 
-from selenium.webdriver.common.by import By
-from selenium.webdriver.common.keys import Keys
-from selenium.webdriver.support import expected_conditions as EC
-from selenium.webdriver.support.ui import WebDriverWait
+# CONFIGURACIÓN DE BASE LOCAL
+
 
 # Ruta compartida de la base de datos SQLite
 DB_PATH = r"C:\Users\aflores\.jenkins\Compartida_con_test_bantotal\dni_tracker.db"
@@ -434,9 +427,8 @@ def inyectar_cuit(driver, cuit_no_guiones):
         raise
 
 
-# --------------------------------------------------------------------
 # USO PRINCIPAL
-# --------------------------------------------------------------------
+
 try:
     inicializar_db()
     cuit_no_guiones, pref, dni_generado = generar_cuit_secuencial("Varones")
@@ -1434,44 +1426,73 @@ def seleccionar_pais_uruguay(driver):
 seleccionar_pais_uruguay(driver)
 
 
-# Seleccionar tipo de documento CUIT
-def seleccionar_tipo_documento_cuit(driver):
+# Seleccionar tipo de documento CUIT con validación y reintento
+def seleccionar_tipo_documento_cuit(driver, max_reintentos=2):
     """
-    Despliega el combo 'Tipo de documento' (vTDOCUM)
-    y selecciona la opción '1' (C.U.I.T.), disparando correctamente los eventos GeneXus.
+    Selecciona el tipo de documento 'C.U.I.T.' (valor='7') y valida que el cambio se haya aplicado.
+    Si al leer el valor se detecta 'PASAPORTE' u otro incorrecto, reintenta hasta max_reintentos.
     """
-    print("Seleccionando tipo de documento: C.U.I.T. (valor='1')")
-    try:
-        # Esperar que el combo esté presente y visible dentro del iframe actual
-        element = WebDriverWait(driver, 25).until(
-            EC.presence_of_element_located((By.ID, "vTDOCUM"))
-        )
-        time.sleep(0.5)  # pequeña espera para permitir inicialización GX
+    print("Seleccionando tipo de documento: C.U.I.T. (valor='7')")
+    intentos = 0
 
-        # Desplegar y seleccionar la opción "1"
-        select = Select(element)
-        select.select_by_value("7")  # 1 = C.U.I.T.
+    while intentos < max_reintentos:
+        try:
+            # Esperar que el combo esté presente y visible
+            element = WebDriverWait(driver, 25).until(
+                EC.presence_of_element_located((By.ID, "vTDOCUM"))
+            )
+            time.sleep(0.5)
 
-        # Forzar ciclo de eventos GX (onfocus → onchange → onblur)
-        driver.execute_script(
+            # Seleccionar la opción '7' (C.U.I.T.)
+            select = Select(element)
+            select.select_by_value("7")
+
+            # Forzar ciclo completo de eventos GeneXus
+            driver.execute_script(
+                """
+                const select = document.getElementById('vTDOCUM');
+                select.focus();
+                select.value = '7';
+                const changeEvent = new Event('change', { bubbles: true });
+                select.dispatchEvent(changeEvent);
+                const blurEvent = new Event('blur', { bubbles: true });
+                select.dispatchEvent(blurEvent);
             """
-            const select = document.getElementById('vTDOCUM');
-            select.focus();
-            select.value = '7';
-            const changeEvent = new Event('change', { bubbles: true });
-            select.dispatchEvent(changeEvent);
-            const blurEvent = new Event('blur', { bubbles: true });
-            select.dispatchEvent(blurEvent);
-        """
-        )
+            )
 
-        print("Tipo de documento 'C.U.I.T.' seleccionado correctamente.")
+            time.sleep(0.5)
 
-    except Exception as e:
-        print(f"Error al seleccionar tipo de documento: {e}")
+            # Validar que el valor actual sea '7' (C.U.I.T.)
+            valor_actual = element.get_attribute("value")
+            texto_actual = element.find_element(
+                By.XPATH, f".//option[@value='{valor_actual}']"
+            ).text.strip()
+
+            print(f"Validación: valor={valor_actual} texto='{texto_actual}'")
+
+            if valor_actual == "7" and "CUIT" in texto_actual.upper():
+                print("Tipo de documento 'C.U.I.T.' confirmado correctamente.")
+                return True
+
+            # Si quedó PASAPORTE u otro valor, reintentar
+            print(
+                f"Detected '{texto_actual}', reintentando selección (intento {intentos+1}/{max_reintentos})..."
+            )
+            intentos += 1
+            time.sleep(1)
+
+        except Exception as e:
+            print(f"Error al seleccionar tipo de documento (intento {intentos+1}): {e}")
+            intentos += 1
+            time.sleep(1)
+
+    # Si llega hasta acá, no logró dejar CUIT seleccionado
+    print("No se pudo confirmar la selección de 'C.U.I.T.' después de varios intentos.")
+    driver.save_screenshot("error_tipo_doc_cuit.png")
+    return False
 
 
-# llamar al step: Seleccionar tipo de documento CUIT
+# Llamar al step:
 seleccionar_tipo_documento_cuit(driver)
 
 
