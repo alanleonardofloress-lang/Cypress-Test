@@ -26,6 +26,13 @@ pipeline {
     }
 
     stages {
+
+        stage('Preparar entorno') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage('Checkout') {
             steps {
                 git branch: 'main', url: 'https://github.com/alanleonardofloress-lang/Cypress-Test.git'
@@ -42,7 +49,7 @@ pipeline {
         stage('Instalar dependencias') {
             steps {
                 script {
-                    if (params.TEST_TYPE.equalsIgnoreCase('CYPRESS')) {
+                    if (params.TEST_TYPE.toString().trim().equalsIgnoreCase('CYPRESS')) {
                         echo 'Instalando dependencias de Cypress...'
                         sh 'npm install'
                     } else {
@@ -60,7 +67,7 @@ pipeline {
         stage('Ejecutar tests') {
             steps {
                 script {
-                    if (params.TEST_TYPE.equalsIgnoreCase('CYPRESS')) {
+                    if (params.TEST_TYPE.toString().trim().equalsIgnoreCase('CYPRESS')) {
                         echo 'Ejecutando suite de Cypress...'
                         sh "npx cypress run --browser chrome --headless --spec \"cypress/e2e/${params.TEST_SUITE}/*.cy.js\""
                     } else {
@@ -83,18 +90,24 @@ pipeline {
     }
 
     post {
+        always {
+            echo 'Pipeline terminado (éxito o fallo).'
+
+            if (params.TEST_TYPE.toString().trim().equalsIgnoreCase('CYPRESS')) {
+                archiveArtifacts artifacts: 'cypress/screenshots/**/*.png', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'cypress/videos/**/*.mp4', allowEmptyArchive: true
+            } else {
+                archiveArtifacts artifacts: 'selenium_local/**/*.png', allowEmptyArchive: true
+                archiveArtifacts artifacts: 'selenium_local/**/*.log', allowEmptyArchive: true
+            }
+        }
+
         success {
             echo 'Pipeline finalizado con éxito.'
         }
+
         failure {
             echo 'Pipeline falló. Revisar logs.'
-        }
-        always {
-            echo 'Pipeline terminado (éxito o fallo).'
-            archiveArtifacts artifacts: 'cypress/screenshots/**/*.png', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'cypress/videos/**/*.mp4', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'selenium_local/**/*.png', allowEmptyArchive: true
-            archiveArtifacts artifacts: 'selenium_local/**/*.log', allowEmptyArchive: true
         }
     }
 }
