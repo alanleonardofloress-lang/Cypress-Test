@@ -65,7 +65,7 @@ chrome_options.add_argument("--disable-dev-shm-usage")
 driver = webdriver.Chrome(options=chrome_options)
 wait = WebDriverWait(driver, 20)
 
-print("Driver inicializado correctamente.")
+logger.info("Driver inicializado correctamente.")
 
 
 # Ir a la URL de login
@@ -77,12 +77,12 @@ wait = WebDriverWait(driver, 20)
 MAX_INTENTOS = 3
 
 try:
-    print("Iniciando proceso de login...")
+    logger.info("Iniciando proceso de login...")
 
     # Reintentar ingreso de credenciales
     for intento in range(1, MAX_INTENTOS + 1):
         try:
-            print(f"Intento de ingreso de credenciales {intento}/{MAX_INTENTOS}")
+            logger.info(f"Intento de ingreso de credenciales {intento}/{MAX_INTENTOS}")
 
             # Esperar campo de usuario
             user_input = wait.until(EC.presence_of_element_located((By.ID, "vUSER")))
@@ -107,35 +107,35 @@ try:
             if not user_value.isalnum():
                 raise ValueError(f"Usuario contiene caracteres inválidos: {user_value}")
 
-            print("Campos validados correctamente.")
+            logger.info("Campos validados correctamente.")
             break  # ambos campos válidos, salir del ciclo
 
         except (TimeoutException, ValueError) as e:
-            print(f"Error al completar credenciales (intento {intento}): {e}")
+            logger.info(f"Error al completar credenciales (intento {intento}): {e}")
             if intento < MAX_INTENTOS:
-                print("Reintentando ingreso de credenciales...")
+                logger.info("Reintentando ingreso de credenciales...")
                 time.sleep(2)
             else:
-                print("No se pudo validar las credenciales tras varios intentos.")
+                logger.info("No se pudo validar las credenciales tras varios intentos.")
 
                 raise
 
     # Clic en botón iniciar sesión
     login_button = wait.until(EC.element_to_be_clickable((By.ID, "BTNOPINICIARSESION")))
     login_button.click()
-    print("Clic en botón 'Iniciar sesión' ejecutado correctamente.")
+    logger.info("Clic en botón 'Iniciar sesión' ejecutado correctamente.")
 
     # Esperar apertura de la nueva ventana
     wait.until(EC.number_of_windows_to_be(2))
     driver.switch_to.window(driver.window_handles[-1])
-    print("Login exitoso y dentro de RealIndex.")
+    logger.info("Login exitoso y dentro de RealIndex.")
 
 except TimeoutException:
-    print("Timeout: no se encontró algún elemento del login.")
+    logger.info("Timeout: no se encontró algún elemento del login.")
 except ValueError as e:
-    print(f"Error de validación antes de login: {e}")
+    logger.info(f"Error de validación antes de login: {e}")
 except Exception as e:
-    print(f"Error inesperado en el login: {e}")
+    logger.info(f"Error inesperado en el login: {e}")
 
 
 # MENÚ PRINCIPAL
@@ -146,13 +146,13 @@ def click_seguro(driver, wait, xpath, descripcion="elemento"):
         time.sleep(0.3)
         try:
             ActionChains(driver).move_to_element(elem).click().perform()
-            print(f"Se hizo clic en {descripcion}.")
+            logger.info(f"Se hizo clic en {descripcion}.")
         except:
             driver.execute_script("arguments[0].click();", elem)
-            print(f"Clic en {descripcion} realizado mediante JavaScript.")
+            logger.info(f"Clic en {descripcion} realizado mediante JavaScript.")
         return True
     except Exception as e:
-        print(f"No se pudo hacer clic en {descripcion}: {e}")
+        logger.info(f"No se pudo hacer clic en {descripcion}: {e}")
         return False
 
 
@@ -181,7 +181,7 @@ try:
     driver.switch_to.default_content()
 
     # NUEVO BLOQUE: esperar a que el contenedor procContainer se cargue
-    print("Esperando que se cargue el iframe principal dentro de procContainer...")
+    logger.info("Esperando que se cargue el iframe principal dentro de procContainer...")
     wait.until(EC.presence_of_element_located((By.ID, "procContainer")))
     iframe_principal = WebDriverWait(driver, 30).until(
         EC.presence_of_element_located(
@@ -189,16 +189,16 @@ try:
         )
     )
     driver.switch_to.frame(iframe_principal)
-    print("Ingresado al iframe principal (id=1) correctamente.")
+    logger.info("Ingresado al iframe principal (id=1) correctamente.")
 
     # Esperar a que se inyecte el iframe dinámico process1_stepX -
-    print("Esperando a que se cargue el contenido dinámico (process1_stepX)...")
+    logger.info("Esperando a que se cargue el contenido dinámico (process1_stepX)...")
     for i in range(20):
         frames = driver.find_elements(By.TAG_NAME, "iframe")
         visibles = [f for f in frames if "visible" in (f.get_attribute("style") or "")]
         if visibles:
             iframe_inner = visibles[0]
-            print(
+            logger.info(
                 f"Se encontró iframe dinámico: name={iframe_inner.get_attribute('name')} style={iframe_inner.get_attribute('style')}"
             )
             driver.switch_to.frame(iframe_inner)
@@ -216,7 +216,7 @@ try:
             (By.XPATH, "//a[@id='BTNOPAGREGAR' or normalize-space(text())='Agregar']")
         )
     )
-    print("Botón 'Agregar' detectado en la pantalla de mantenimiento")
+    logger.info("Botón 'Agregar' detectado en la pantalla de mantenimiento")
 
     driver.execute_script(
         """
@@ -230,11 +230,11 @@ try:
     """,
         agregar_btn,
     )
-    print("Click en botón 'Agregar' realizado correctamente")
+    logger.info("Click en botón 'Agregar' realizado correctamente")
 
 
 except Exception as e:
-    print(f"Error inesperado: {e}")
+    logger.info(f"Error inesperado: {e}")
 
 # Volver al frame principal
 driver.switch_to.default_content()
@@ -246,7 +246,7 @@ iframe_principal = wait.until(
 driver.switch_to.frame(iframe_principal)
 
 # Esperar el iframe del formulario (process1_step2)
-print("Esperando el iframe del formulario (nuevo iframe visible tras Agregar)...")
+logger.info("Esperando el iframe del formulario (nuevo iframe visible tras Agregar)...")
 
 iframe_form = None
 iframe_anterior = iframe_inner.get_attribute(
@@ -268,7 +268,7 @@ for i in range(40):
             )
             driver.switch_to.frame(iframe_principal)
             driver.switch_to.frame(iframe_form)
-            print(f"Nuevo iframe detectado y activado: {name}")
+            logger.info(f"Nuevo iframe detectado y activado: {name}")
             break
     if iframe_form:
         break
@@ -280,10 +280,10 @@ else:
 
 
 # Seleccionar país
-print("Buscando selector de país...")
+logger.info("Buscando selector de país...")
 pais_select = wait.until(EC.element_to_be_clickable((By.ID, "vPAIS")))
 Select(pais_select).select_by_visible_text("ARGENTINA")
-print("País 'PERÚ' seleccionado correctamente")
+logger.info("País 'PERÚ' seleccionado correctamente")
 
 
 # Seleccionar tipo de documento
@@ -292,9 +292,9 @@ try:
         EC.element_to_be_clickable((By.ID, "vTDOCUM"))
     )
     Select(tipo_doc_select).select_by_visible_text("C.U.I.T.")
-    print("Tipo de documento seleccionado: C.U.I.T.")
+    logger.info("Tipo de documento seleccionado: C.U.I.T.")
 except Exception as e:
-    print(f"Error al seleccionar tipo de documento: {e}")
+    logger.info(f"Error al seleccionar tipo de documento: {e}")
 
 
 import logging
@@ -314,7 +314,7 @@ os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
 
-print(f"Usando base de datos en: {DB_PATH}")
+logger.info(f"Usando base de datos en: {DB_PATH}")
 logger.info(f"Base de datos SQLite activa en: {DB_PATH}")
 
 
@@ -437,43 +437,43 @@ def inyectar_cuit(driver, cuit_no_guiones):
 try:
     inicializar_db()
     cuit_no_guiones, pref, dni_generado = generar_cuit_secuencial("Varones")
-    print(
+    logger.info(
         f"Generado CUIT (sin guiones): {cuit_no_guiones}  (DNI: {dni_generado}, pref: {pref})"
     )
     valor_final = inyectar_cuit(driver, cuit_no_guiones)
-    print("Valor final en campo:", valor_final)
+    logger.info("Valor final en campo:", valor_final)
 except Exception:
     logger.exception("Error general en generación/inyección de CUIT:")
 
 
 # Seleccionar tipo de alta
-print("Seleccionando tipo de alta 'Normal'...")
+logger.info("Seleccionando tipo de alta 'Normal'...")
 
 try:
     tipo_alta_select = WebDriverWait(driver, 15).until(
         EC.element_to_be_clickable((By.ID, "vALTACOD"))
     )
     Select(tipo_alta_select).select_by_visible_text("Normal")
-    print("Tipo de alta seleccionado: Normal")
+    logger.info("Tipo de alta seleccionado: Normal")
 except Exception as e:
-    print(f"Error al seleccionar tipo de alta: {e}")
+    logger.info(f"Error al seleccionar tipo de alta: {e}")
 
 
 # Seleccionar canal de origen
-print("Seleccionando canal de origen 'Sucursal'...")
+logger.info("Seleccionando canal de origen 'Sucursal'...")
 
 try:
     canal_origen_select = WebDriverWait(driver, 15).until(
         EC.element_to_be_clickable((By.ID, "vDSTCOD"))
     )
     Select(canal_origen_select).select_by_value("1")
-    print("Canal de origen seleccionado: Sucursal (value=1)")
+    logger.info("Canal de origen seleccionado: Sucursal (value=1)")
 except Exception as e:
-    print(f"Error al seleccionar canal de origen: {e}")
+    logger.info(f"Error al seleccionar canal de origen: {e}")
 
 
 # Seleccionar categoría comercial
-print("Seleccionando categoría comercial 'Comercial'...")
+logger.info("Seleccionando categoría comercial 'Comercial'...")
 
 try:
     categoria_select = WebDriverWait(driver, 15).until(
@@ -481,13 +481,13 @@ try:
     )
     # Seleccionamos por valor (S = Comercial)
     Select(categoria_select).select_by_value("S")
-    print("Categoría seleccionada: Comercial (value='S')")
+    logger.info("Categoría seleccionada: Comercial (value='S')")
 except Exception as e:
-    print(f"Error al seleccionar categoría comercial: {e}")
+    logger.info(f"Error al seleccionar categoría comercial: {e}")
 
 
 # Seleccionar tipo de persona
-print("Seleccionando tipo de persona 'Física'...")
+logger.info("Seleccionando tipo de persona 'Física'...")
 
 try:
     tipo_persona_select = WebDriverWait(driver, 15).until(
@@ -495,13 +495,13 @@ try:
     )
     # Seleccionamos por valor (F = Física)
     Select(tipo_persona_select).select_by_value("F")
-    print("Tipo de persona seleccionado: Física (value='F')")
+    logger.info("Tipo de persona seleccionado: Física (value='F')")
 except Exception as e:
-    print(f"Error al seleccionar tipo de persona: {e}")
+    logger.info(f"Error al seleccionar tipo de persona: {e}")
 
 
 # Confirmar alta
-print("Buscando y haciendo clic en el botón 'Confirmar'...")
+logger.info("Buscando y haciendo clic en el botón 'Confirmar'...")
 
 try:
     confirmar_btn = WebDriverWait(driver, 15).until(
@@ -516,7 +516,7 @@ try:
     # Intento 1: click normal
     try:
         confirmar_btn.click()
-        print("Click normal en 'Confirmar' ejecutado correctamente.")
+        logger.info("Click normal en 'Confirmar' ejecutado correctamente.")
     except:
         # Intento 2: click mediante JavaScript (más confiable en GeneXus)
         driver.execute_script(
@@ -531,15 +531,15 @@ try:
         """,
             confirmar_btn,
         )
-        print("Click forzado por JavaScript en 'Confirmar' ejecutado correctamente.")
+        logger.info("Click forzado por JavaScript en 'Confirmar' ejecutado correctamente.")
 
 
 except Exception as e:
-    print(f"Error al hacer clic en Confirmar: {e}")
+    logger.info(f"Error al hacer clic en Confirmar: {e}")
 
 
 # Confirmar acción final (clic en "Sí")
-print("Buscando y haciendo clic en el botón 'Sí'...")
+logger.info("Buscando y haciendo clic en el botón 'Sí'...")
 
 try:
     # Esperar a que aparezca el diálogo de confirmación
@@ -552,7 +552,7 @@ try:
     # Intento 1: click normal
     try:
         boton_si.click()
-        print("Click normal en 'Sí' ejecutado correctamente.")
+        logger.info("Click normal en 'Sí' ejecutado correctamente.")
     except:
         # Intento 2: click forzado con JavaScript (más confiable)
         driver.execute_script(
@@ -567,15 +567,15 @@ try:
         """,
             boton_si,
         )
-        print("Click forzado por JavaScript en 'Sí' ejecutado correctamente.")
+        logger.info("Click forzado por JavaScript en 'Sí' ejecutado correctamente.")
 
 
 except Exception as e:
-    print(f"Error al hacer clic en 'Sí': {e}")
+    logger.info(f"Error al hacer clic en 'Sí': {e}")
 
 
 # Rebuscar específicamente el iframe process1_step3
-print("Esperando el iframe visible de 'Datos de Persona' (process1_step3)...")
+logger.info("Esperando el iframe visible de 'Datos de Persona' (process1_step3)...")
 
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
@@ -592,7 +592,7 @@ for i in range(50):
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             driver.switch_to.frame(f)
-            print("Iframe process1_step3 activo y visible.")
+            logger.info("Iframe process1_step3 activo y visible.")
             iframe_visible = f
             break
     if iframe_visible:
@@ -620,62 +620,62 @@ primer_nombre = random.choice(nombres)
 segundo_nombre = random.choice(nombres)
 
 # Ingresar Primer Apellido
-print("Ingresando 'Primer Apellido' dentro del iframe process1_stepX...")
+logger.info("Ingresando 'Primer Apellido' dentro del iframe process1_stepX...")
 try:
     apellido_input = WebDriverWait(driver, 20).until(
         EC.element_to_be_clickable((By.ID, "vPFAPE1"))
     )
     apellido_input.clear()
     apellido_input.send_keys(primer_apellido)
-    print(f"Campo 'Primer Apellido' completado: {primer_apellido}")
+    logger.info(f"Campo 'Primer Apellido' completado: {primer_apellido}")
 except Exception as e:
-    print(f"Error al completar 'Primer Apellido': {e}")
+    logger.info(f"Error al completar 'Primer Apellido': {e}")
 
 # Ingresar Segundo Apellido
-print("Ingresando 'Segundo Apellido'...")
+logger.info("Ingresando 'Segundo Apellido'...")
 try:
     segundo_apellido_input = WebDriverWait(driver, 20).until(
         EC.element_to_be_clickable((By.ID, "vPFAPE2"))
     )
     segundo_apellido_input.clear()
     segundo_apellido_input.send_keys(segundo_apellido)
-    print(f"Campo 'Segundo Apellido' completado: {segundo_apellido}")
+    logger.info(f"Campo 'Segundo Apellido' completado: {segundo_apellido}")
 except Exception as e:
-    print(f"Error al completar 'Segundo Apellido': {e}")
+    logger.info(f"Error al completar 'Segundo Apellido': {e}")
 
 # Ingresar Primer Nombre
-print("Ingresando 'Primer Nombre'...")
+logger.info("Ingresando 'Primer Nombre'...")
 try:
     nombre1_input = WebDriverWait(driver, 20).until(
         EC.element_to_be_clickable((By.ID, "vPFNOM1"))
     )
     nombre1_input.clear()
     nombre1_input.send_keys(primer_nombre)
-    print(f"Campo 'Primer Nombre' completado: {primer_nombre}")
+    logger.info(f"Campo 'Primer Nombre' completado: {primer_nombre}")
 except Exception as e:
-    print(f"Error al completar 'Primer Nombre': {e}")
+    logger.info(f"Error al completar 'Primer Nombre': {e}")
 
 # Ingresar Segundo Nombre
-print("Ingresando 'Segundo Nombre'...")
+logger.info("Ingresando 'Segundo Nombre'...")
 try:
     nombre2_input = WebDriverWait(driver, 20).until(
         EC.element_to_be_clickable((By.ID, "vPFNOM2"))
     )
     nombre2_input.clear()
     nombre2_input.send_keys(segundo_nombre)
-    print(f"Campo 'Segundo Nombre' completado: {segundo_nombre}")
+    logger.info(f"Campo 'Segundo Nombre' completado: {segundo_nombre}")
 except Exception as e:
-    print(f"Error al completar 'Segundo Nombre': {e}")
+    logger.info(f"Error al completar 'Segundo Nombre': {e}")
 
 
 # tabular para entrar al campo fecha de nacimiento
 def tabular_una_vez(driver):
     try:
-        print("Enviando tecla TAB para enfocar el siguiente campo...")
+        logger.info("Enviando tecla TAB para enfocar el siguiente campo...")
         ActionChains(driver).send_keys(Keys.TAB).perform()
-        print("TAB enviado correctamente.")
+        logger.info("TAB enviado correctamente.")
     except Exception as e:
-        print(f"Error al enviar TAB: {e}")
+        logger.info(f"Error al enviar TAB: {e}")
 
 
 # generar fecha aleatoria mayor a 20 años
@@ -695,7 +695,7 @@ def generar_fecha_mayor_a_20_anios():
 def ingresar_fecha_nacimiento(driver):
     try:
         fecha_ddmmaaaa = generar_fecha_mayor_a_20_anios()
-        print(f"Ingresando fecha aleatoria '{fecha_ddmmaaaa}' en el campo vPFFNAC...")
+        logger.info(f"Ingresando fecha aleatoria '{fecha_ddmmaaaa}' en el campo vPFFNAC...")
 
         campo_fecha = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.ID, "vPFFNAC"))
@@ -711,10 +711,10 @@ def ingresar_fecha_nacimiento(driver):
         campo_fecha.send_keys(fecha_ddmmaaaa)
         campo_fecha.send_keys(Keys.TAB)  # dispara blur/onchange
 
-        print("Fecha ingresada correctamente.")
+        logger.info("Fecha ingresada correctamente.")
 
     except Exception as e:
-        print(f"Error al ingresar fecha: {e}")
+        logger.info(f"Error al ingresar fecha: {e}")
 
 
 # Llamada a las funciones
@@ -738,21 +738,21 @@ intentar_con_reintento(
 
 
 # Email
-print("Ingresando email 'aflores@accionpoint.com'...")
+logger.info("Ingresando email 'aflores@accionpoint.com'...")
 try:
     email_input = WebDriverWait(driver, 20).until(
         EC.element_to_be_clickable((By.ID, "vEMAIL"))
     )
     email_input.clear()
     email_input.send_keys("aflores@accionpoint.com")
-    print("Email ingresado correctamente.")
+    logger.info("Email ingresado correctamente.")
 except Exception as e:
-    print(f"Error al completar el email: {e}")
+    logger.info(f"Error al completar el email: {e}")
 
 
 # Seleccionar sexo aleatorio con reintento
 def seleccionar_sexo(driver):
-    print("Seleccionando sexo aleatorio en vPFCANT...")
+    logger.info("Seleccionando sexo aleatorio en vPFCANT...")
     try:
         sexo_select = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.ID, "vPFCANT"))
@@ -763,9 +763,9 @@ def seleccionar_sexo(driver):
         sexo_random = random.choice(["1", "2", "3"])
         select_sexo.select_by_value(sexo_random)
 
-        print(f"Sexo seleccionado correctamente: {sexo_random}")
+        logger.info(f"Sexo seleccionado correctamente: {sexo_random}")
     except Exception as e:
-        print(f"Error al seleccionar sexo: {e}")
+        logger.info(f"Error al seleccionar sexo: {e}")
         raise e  # Importante: relanzar para que el reintento funcione
 
 
@@ -788,7 +788,7 @@ intentar_con_reintento(
 
 
 # Seleccionar país de nacimiento: Argentina
-print("Seleccionando país de nacimiento: Argentina...")
+logger.info("Seleccionando país de nacimiento: Argentina...")
 try:
     pais_nac_select = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.ID, "vPFPNAC"))
@@ -801,14 +801,14 @@ try:
         select.dispatchEvent(event);
     """
     )
-    print("País de nacimiento 'Argentina' seleccionado correctamente.")
+    logger.info("País de nacimiento 'Argentina' seleccionado correctamente.")
 except Exception as e:
-    print(f"Error al seleccionar país de nacimiento: {e}")
+    logger.info(f"Error al seleccionar país de nacimiento: {e}")
 
 
 #  Seleccionar estado civil
 def seleccionar_estado_civil(driver):
-    print("Seleccionando estado civil...")
+    logger.info("Seleccionando estado civil...")
     set_gx_select(driver, "vPFECIV", "1", "HTMLTXTVLEVENT_ESTCIV")  # 1 = Soltero/a
 
 
@@ -830,14 +830,14 @@ intentar_con_reintento(
 
 
 # Seleccionar nacionalidad
-print("Seleccionando nacionalidad: Argentina...")
+logger.info("Seleccionando nacionalidad: Argentina...")
 set_gx_select(driver, "vPAISCIU", "80", "HTMLTXTVLEVENT_CPOPAISNAC")
 
 
 # Seleccionar nivel educativo
 def seleccionar_nivel_educativo(driver):
     nivel_random = nivel_educativo_random()
-    print(f"Seleccionando nivel educativo aleatorio (valor={nivel_random})...")
+    logger.info(f"Seleccionando nivel educativo aleatorio (valor={nivel_random})...")
 
     esperar_y_setear_combo(
         driver,
@@ -868,7 +868,7 @@ intentar_con_reintento(
 
 # Seleccionar si es residente con reintento
 def seleccionar_residente(driver):
-    print("Seleccionando residente: Sí (valor=2)...")
+    logger.info("Seleccionando residente: Sí (valor=2)...")
     esperar_y_setear_combo(
         driver,
         field_id="vCMBCODAUX4",
@@ -899,7 +899,7 @@ intentar_con_reintento(
 
 # Ingresar ingreso mensual en pesos
 def ingresar_ingreso_mensual(driver, ingreso="900000"):
-    print(f"Ingresando ingreso mensual: {ingreso}...")
+    logger.info(f"Ingresando ingreso mensual: {ingreso}...")
     campo_ingreso = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "vPEXING"))
     )
@@ -915,7 +915,7 @@ def ingresar_ingreso_mensual(driver, ingreso="900000"):
         time.sleep(0.1)  # más realista: tipo humano
 
     campo_ingreso.send_keys(Keys.TAB)  # activa blur/onchange
-    print("Ingreso mensual ingresado correctamente.")
+    logger.info("Ingreso mensual ingresado correctamente.")
 
 
 def verificar_ingreso_mensual(driver, ingreso="900000"):
@@ -940,13 +940,13 @@ intentar_con_reintento(
 
 # Seleccionar ocupación
 def seleccionar_ocupacion_empleado(driver):
-    print("Seleccionando ocupación: Empleado...")
+    logger.info("Seleccionando ocupación: Empleado...")
     select_element = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "vSNGC07COD"))
     )
     select = Select(select_element)
     select.select_by_visible_text("Empleado")  # o .select_by_value("1")
-    print("Ocupación 'Empleado' seleccionada correctamente.")
+    logger.info("Ocupación 'Empleado' seleccionada correctamente.")
 
 
 # Verificador
@@ -970,10 +970,10 @@ intentar_con_reintento(
 
 # Acción: Ingresar datos empleadora
 def ingresar_datos_empleadora(driver):
-    print("Esperando 2 segundos para que se carguen los campos de empleadora...")
+    logger.info("Esperando 2 segundos para que se carguen los campos de empleadora...")
     time.sleep(2)
 
-    print("Ingresando País de Empleadora: 1")
+    logger.info("Ingresando País de Empleadora: 1")
     pais_input = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "vPAISEMPLEADORAUX"))
     )
@@ -984,7 +984,7 @@ def ingresar_datos_empleadora(driver):
     pais_input.send_keys("1")
     pais_input.send_keys(Keys.TAB)
 
-    print("Ingresando Tipo de Documento de Empleadora: 1")
+    logger.info("Ingresando Tipo de Documento de Empleadora: 1")
     tdoc_input = WebDriverWait(driver, 10).until(
         EC.presence_of_element_located((By.ID, "vTDOCEMPLEADORAUX"))
     )
@@ -995,7 +995,7 @@ def ingresar_datos_empleadora(driver):
     tdoc_input.send_keys("1")
     tdoc_input.send_keys(Keys.TAB)
 
-    print("Campos de empleadora completados correctamente.")
+    logger.info("Campos de empleadora completados correctamente.")
 
 
 # Verificador
@@ -1033,7 +1033,7 @@ def generar_cuit_fake():
 def ingresar_cuit_empleadora(driver):
     try:
         cuit = generar_cuit_fake()
-        print(f"Ingresando CUIT de empleadora: {cuit}")
+        logger.info(f"Ingresando CUIT de empleadora: {cuit}")
 
         cuit_input = WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.ID, "vPJNDOC"))
@@ -1048,9 +1048,9 @@ def ingresar_cuit_empleadora(driver):
         # Guardar cuit en atributo para verificación posterior
         driver.last_cuit_empleadora = cuit
 
-        print("CUIT ingresado correctamente.")
+        logger.info("CUIT ingresado correctamente.")
     except Exception as e:
-        print(f"Error al ingresar CUIT: {e}")
+        logger.info(f"Error al ingresar CUIT: {e}")
 
 
 # Verificador
@@ -1077,23 +1077,23 @@ intentar_con_reintento(
 # Hacer click en Confirmar
 def hacer_click_confirmar(driver):
     try:
-        print("Haciendo clic en el botón Confirmar...")
+        logger.info("Haciendo clic en el botón Confirmar...")
 
         confirmar_btn = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.LINK_TEXT, "Confirmar"))
         )
         confirmar_btn.click()
 
-        print("Botón Confirmar clickeado correctamente.")
+        logger.info("Botón Confirmar clickeado correctamente.")
     except Exception as e:
-        print(f"Error al hacer clic en Confirmar: {e}")
+        logger.info(f"Error al hacer clic en Confirmar: {e}")
 
 
 hacer_click_confirmar(driver)
 
 
 # Rebuscar específicamente el iframe process1_step4
-print("Esperando el iframe visible de 'Datos de Persona' (process1_step4)...")
+logger.info("Esperando el iframe visible de 'Datos de Persona' (process1_step4)...")
 
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
@@ -1110,7 +1110,7 @@ for i in range(50):
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             driver.switch_to.frame(f)
-            print("Iframe process1_step4 activo y visible.")
+            logger.info("Iframe process1_step4 activo y visible.")
             iframe_visible = f
             break
     if iframe_visible:
@@ -1121,7 +1121,7 @@ else:
 
 
 def seleccionar_nacionalidad_no(driver, wait):
-    print("Seleccionando nacionalidad: No (valor='N')...")
+    logger.info("Seleccionando nacionalidad: No (valor='N')...")
 
     try:
         # Esperar que el combo esté visible y clickeable dentro del iframe actual
@@ -1133,9 +1133,9 @@ def seleccionar_nacionalidad_no(driver, wait):
         try:
             select = Select(combo)
             select.select_by_value("N")
-            print("Opción 'N' seleccionada mediante Select.")
+            logger.info("Opción 'N' seleccionada mediante Select.")
         except Exception as e:
-            print(
+            logger.info(
                 f"No se pudo usar Select directamente: {e}, intentando con JavaScript..."
             )
 
@@ -1159,12 +1159,12 @@ def seleccionar_nacionalidad_no(driver, wait):
             "return document.getElementById('vNACIONALIDAD')?.value;"
         )
         if valor_final == "N":
-            print("Nacionalidad 'No' seleccionada correctamente.")
+            logger.info("Nacionalidad 'No' seleccionada correctamente.")
         else:
-            print(f"Advertencia: el valor final es '{valor_final}' (esperado: 'N').")
+            logger.info(f"Advertencia: el valor final es '{valor_final}' (esperado: 'N').")
 
     except Exception as e:
-        print(f"Error al seleccionar nacionalidad: {e}")
+        logger.info(f"Error al seleccionar nacionalidad: {e}")
 
 
 seleccionar_nacionalidad_no(driver, wait)
@@ -1176,7 +1176,7 @@ def seleccionar_residencia_no(driver, wait):
     Selecciona la opción 'No' (valor='N') en el combo vTIENERESI2.
     Asume que ya estamos dentro del iframe correcto.
     """
-    print("Seleccionando 'No' en el campo ¿Tiene residencia? (vTIENERESI2)...")
+    logger.info("Seleccionando 'No' en el campo ¿Tiene residencia? (vTIENERESI2)...")
     try:
         # Esperar que el combo esté visible e interactuable
         combo = wait.until(EC.element_to_be_clickable((By.ID, "vTIENERESI2")))
@@ -1187,9 +1187,9 @@ def seleccionar_residencia_no(driver, wait):
         try:
             select = Select(combo)
             select.select_by_value("N")
-            print("Opción 'N' seleccionada mediante Select.")
+            logger.info("Opción 'N' seleccionada mediante Select.")
         except Exception as e:
-            print(
+            logger.info(
                 f"No se pudo usar Select directamente: {e}, intentando con JavaScript..."
             )
 
@@ -1213,14 +1213,14 @@ def seleccionar_residencia_no(driver, wait):
             "return document.getElementById('vTIENERESI2')?.value;"
         )
         if valor_final == "N":
-            print("Campo '¿Tiene residencia?' seleccionado correctamente (No).")
+            logger.info("Campo '¿Tiene residencia?' seleccionado correctamente (No).")
         else:
-            print(
+            logger.info(
                 f"Advertencia: valor final inesperado '{valor_final}' (esperado 'N')."
             )
 
     except Exception as e:
-        print(f"Error al seleccionar residencia: {e}")
+        logger.info(f"Error al seleccionar residencia: {e}")
 
 
 seleccionar_residencia_no(driver, wait)
@@ -1228,7 +1228,7 @@ seleccionar_residencia_no(driver, wait)
 
 # Presionar botón Confirmar
 def presionar_boton_confirmar(driver):
-    print("Haciendo clic en el botón Confirmar...")
+    logger.info("Haciendo clic en el botón Confirmar...")
     try:
         boton_confirmar = WebDriverWait(driver, 20).until(
             EC.element_to_be_clickable(
@@ -1242,7 +1242,7 @@ def presionar_boton_confirmar(driver):
         driver.execute_script("arguments[0].scrollIntoView(true);", boton_confirmar)
         time.sleep(0.3)
         boton_confirmar.click()
-        print("Botón Confirmar clickeado correctamente.")
+        logger.info("Botón Confirmar clickeado correctamente.")
 
         # Forzar el evento GeneXus por si el click no lo dispara
         driver.execute_script(
@@ -1255,7 +1255,7 @@ def presionar_boton_confirmar(driver):
         )
 
     except Exception as e:
-        print(f"Error al presionar Confirmar: {e}")
+        logger.info(f"Error al presionar Confirmar: {e}")
 
 
 # llamar al step: Presionar botón Confirmar
@@ -1263,16 +1263,16 @@ presionar_boton_confirmar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step5 esté visible (con reintento)
-print("Esperando a que process1_step5 cambie a visible...")
+logger.info("Esperando a que process1_step5 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -1282,19 +1282,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step5 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step5 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step5.")
+        logger.info("Aún no se encuentra el iframe process1_step5.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step5 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step5.")
+logger.info("Entré correctamente al iframe process1_step5.")
 
 
 # Presionar botón Agregar
@@ -1303,7 +1303,7 @@ def presionar_boton_agregar(driver):
     Presiona el botón 'Agregar' dentro del iframe actual (GeneXus),
     ejecutando correctamente el evento GX.
     """
-    print("Haciendo clic en el botón Agregar...")
+    logger.info("Haciendo clic en el botón Agregar...")
     try:
         # Esperar el botón dentro del iframe actual (ya deberías estar en process1_step6 o similar)
         boton_agregar = WebDriverWait(driver, 20).until(
@@ -1316,7 +1316,7 @@ def presionar_boton_agregar(driver):
 
         # Click real
         boton_agregar.click()
-        print("Botón Agregar clickeado correctamente.")
+        logger.info("Botón Agregar clickeado correctamente.")
 
         # Forzar evento GeneXus por si el click no lo dispara
         driver.execute_script(
@@ -1329,7 +1329,7 @@ def presionar_boton_agregar(driver):
         )
 
     except Exception as e:
-        print(f"Error al presionar Agregar: {e}")
+        logger.info(f"Error al presionar Agregar: {e}")
 
 
 # llamar al step: Presionar botón Agregar
@@ -1337,16 +1337,16 @@ presionar_boton_agregar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step6 esté visible (con reintento)
-print("Esperando a que process1_step6 cambie a visible...")
+logger.info("Esperando a que process1_step6 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -1356,19 +1356,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step6 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step6 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("⚠️ Aún no se encuentra el iframe process1_step6.")
+        logger.info("Aún no se encuentra el iframe process1_step6.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step6 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step6.")
+logger.info("Entré correctamente al iframe process1_step6.")
 
 
 # Seleccionar país URUGUAY
@@ -1378,7 +1378,7 @@ def seleccionar_pais_uruguay(driver):
     asegurando compatibilidad con GeneXus (focus, onchange, blur).
     """
     try:
-        print("Seleccionando país: URUGUAY (value='10')...")
+        logger.info("Seleccionando país: URUGUAY (value='10')...")
 
         # Esperar a que el campo esté presente y habilitado
         select_pais = WebDriverWait(driver, 20).until(
@@ -1419,12 +1419,12 @@ def seleccionar_pais_uruguay(driver):
         # Verificar valor final
         valor_final = select_pais.get_attribute("value")
         if valor_final == "10":
-            print("País URUGUAY seleccionado correctamente.")
+            logger.info("País URUGUAY seleccionado correctamente.")
         else:
-            print(f"Verificar selección: valor actual = {valor_final}")
+            logger.info(f"Verificar selección: valor actual = {valor_final}")
 
     except Exception as e:
-        print(f"Error al seleccionar país URUGUAY: {e}")
+        logger.info(f"Error al seleccionar país URUGUAY: {e}")
 
 
 # llamar al step: Seleccionar país URUGUAY
@@ -1437,7 +1437,7 @@ def seleccionar_tipo_documento_cuit(driver, max_reintentos=2):
     Selecciona el tipo de documento 'C.U.I.T.' (valor='7') y valida que el cambio se haya aplicado.
     Si al leer el valor se detecta 'PASAPORTE' u otro incorrecto, reintenta hasta max_reintentos.
     """
-    print("Seleccionando tipo de documento: C.U.I.T. (valor='7')")
+    logger.info("Seleccionando tipo de documento: C.U.I.T. (valor='7')")
     intentos = 0
 
     while intentos < max_reintentos:
@@ -1473,26 +1473,26 @@ def seleccionar_tipo_documento_cuit(driver, max_reintentos=2):
                 By.XPATH, f".//option[@value='{valor_actual}']"
             ).text.strip()
 
-            print(f"Validación: valor={valor_actual} texto='{texto_actual}'")
+            logger.info(f"Validación: valor={valor_actual} texto='{texto_actual}'")
 
             if valor_actual == "7" and "CUIT" in texto_actual.upper():
-                print("Tipo de documento 'C.U.I.T.' confirmado correctamente.")
+                logger.info("Tipo de documento 'C.U.I.T.' confirmado correctamente.")
                 return True
 
             # Si quedó PASAPORTE u otro valor, reintentar
-            print(
+            logger.info(
                 f"Detected '{texto_actual}', reintentando selección (intento {intentos+1}/{max_reintentos})..."
             )
             intentos += 1
             time.sleep(1)
 
         except Exception as e:
-            print(f"Error al seleccionar tipo de documento (intento {intentos+1}): {e}")
+            logger.info(f"Error al seleccionar tipo de documento (intento {intentos+1}): {e}")
             intentos += 1
             time.sleep(1)
 
     # Si llega hasta acá, no logró dejar CUIT seleccionado
-    print("No se pudo confirmar la selección de 'C.U.I.T.' después de varios intentos.")
+    logger.info("No se pudo confirmar la selección de 'C.U.I.T.' después de varios intentos.")
 
     return False
 
@@ -1546,7 +1546,7 @@ def ingresar_cuit(driver):
     """
     try:
         cuit = generar_cuit_sin_guiones()
-        print(f"CUIT generado: {cuit}")
+        logger.info(f"CUIT generado: {cuit}")
 
         # Esperar el campo y hacer clic real para activar onfocus
         input_field = WebDriverWait(driver, 20).until(
@@ -1575,11 +1575,11 @@ def ingresar_cuit(driver):
 
         # Confirmar visualmente
         value = input_field.get_attribute("value")
-        print(f"CUIT ingresado correctamente: {value}")
+        logger.info(f"CUIT ingresado correctamente: {value}")
         return cuit
 
     except Exception as e:
-        print(f"Error al ingresar CUIT: {e}")
+        logger.info(f"Error al ingresar CUIT: {e}")
         return None
 
 
@@ -1605,7 +1605,7 @@ def ingresar_fecha_vencimiento_vDOCFCHVTO(driver):
     try:
         # Generar fecha aleatoria futura
         fecha_ddmmaaaa = generar_fecha_futura_entre_1_y_12_anios()
-        print(
+        logger.info(
             f"Ingresando fecha de vencimiento '{fecha_ddmmaaaa}' en el campo vDOCFCHVTO..."
         )
 
@@ -1615,7 +1615,7 @@ def ingresar_fecha_vencimiento_vDOCFCHVTO(driver):
         )
 
         # 🔹 1: TAB para enfocar naturalmente el campo
-        print("Enviando tecla TAB para posicionarse en el campo fecha...")
+        logger.info("Enviando tecla TAB para posicionarse en el campo fecha...")
         ActionChains(driver).send_keys(Keys.TAB).perform()
         time.sleep(0.3)
 
@@ -1636,14 +1636,14 @@ def ingresar_fecha_vencimiento_vDOCFCHVTO(driver):
         # 🔹 5: Confirmar ingreso
         valor_final = campo_fecha.get_attribute("value").strip()
         if valor_final and valor_final != "  /  /    ":
-            print(f"Fecha de vencimiento ingresada correctamente: {valor_final}")
+            logger.info(f"Fecha de vencimiento ingresada correctamente: {valor_final}")
         else:
-            print("La fecha parece no haberse cargado, revisar validación GeneXus.")
+            logger.info("La fecha parece no haberse cargado, revisar validación GeneXus.")
 
         return fecha_ddmmaaaa
 
     except Exception as e:
-        print(f"Error al ingresar fecha de vencimiento: {e}")
+        logger.info(f"Error al ingresar fecha de vencimiento: {e}")
         return None
 
 
@@ -1653,7 +1653,7 @@ def presionar_boton_confirmar_vDOCFCHVTO(driver):
     Hace clic en el botón 'Confirmar' dentro del formulario actual
     (campo vDOCFCHVTO) y ejecuta correctamente el evento GeneXus.
     """
-    print("Haciendo clic en el botón Confirmar...")
+    logger.info("Haciendo clic en el botón Confirmar...")
     try:
         # Esperar a que el botón esté visible y clickeable
         boton_confirmar = WebDriverWait(driver, 20).until(
@@ -1671,7 +1671,7 @@ def presionar_boton_confirmar_vDOCFCHVTO(driver):
 
         # Clic real en el botón
         boton_confirmar.click()
-        print("Botón Confirmar clickeado correctamente.")
+        logger.info("Botón Confirmar clickeado correctamente.")
 
         # Forzar evento GeneXus (por si el click nativo no dispara gx.evt)
         driver.execute_script(
@@ -1687,7 +1687,7 @@ def presionar_boton_confirmar_vDOCFCHVTO(driver):
         time.sleep(1)
 
     except Exception as e:
-        print(f"Error al presionar Confirmar: {e}")
+        logger.info(f"Error al presionar Confirmar: {e}")
 
 
 # Detectar mensaje de documento duplicado
@@ -1706,7 +1706,7 @@ def verificar_mensaje_documento_duplicado(driver):
             )
         )
         if mensaje.is_displayed():
-            print("Mensaje detectado: Ya existe el Documento con los datos ingresados.")
+            logger.info("Mensaje detectado: Ya existe el Documento con los datos ingresados.")
             return True
     except:
         pass
@@ -1723,29 +1723,29 @@ def flujo_cuit_y_fecha_con_reintento(driver, max_reintentos=3):
     Si aparece el mensaje de duplicado, reintenta hasta max_reintentos veces.
     """
     for intento in range(1, max_reintentos + 1):
-        print(f"\n Intento {intento} de registro de documento...")
+        logger.info(f"\n Intento {intento} de registro de documento...")
 
         # Ingresar CUIT
         cuit_generado = ingresar_cuit(driver)
-        print(f"CUIT ingresado: {cuit_generado}")
+        logger.info(f"CUIT ingresado: {cuit_generado}")
 
         # Ingresar fecha de vencimiento
         fecha_vencimiento = ingresar_fecha_vencimiento_vDOCFCHVTO(driver)
-        print(f"Fecha de vencimiento ingresada: {fecha_vencimiento}")
+        logger.info(f"Fecha de vencimiento ingresada: {fecha_vencimiento}")
 
         # Presionar Confirmar
         presionar_boton_confirmar_vDOCFCHVTO(driver)
 
         # Verificar mensaje de duplicado
         if verificar_mensaje_documento_duplicado(driver):
-            print("Documento duplicado. Reintentando con nuevos datos...")
+            logger.info("Documento duplicado. Reintentando con nuevos datos...")
             time.sleep(1)
             continue
         else:
-            print("Operación confirmada correctamente (sin duplicado).")
+            logger.info("Operación confirmada correctamente (sin duplicado).")
             return cuit_generado, fecha_vencimiento
 
-    print(
+    logger.info(
         "No se pudo completar la operación: todos los intentos resultaron duplicados."
     )
     return None, None
@@ -1755,23 +1755,23 @@ def flujo_cuit_y_fecha_con_reintento(driver, max_reintentos=3):
 cuit_final, fecha_final = flujo_cuit_y_fecha_con_reintento(driver)
 
 if cuit_final:
-    print(f"CUIT final utilizado: {cuit_final}")
-    print(f"Fecha de vencimiento final: {fecha_final}")
+    logger.info(f"CUIT final utilizado: {cuit_final}")
+    logger.info(f"Fecha de vencimiento final: {fecha_final}")
 else:
-    print("No se pudo completar el alta tras varios intentos.")
+    logger.info("No se pudo completar el alta tras varios intentos.")
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step5 esté visible (con reintento)
-print("Esperando a que process1_step5 cambie a visible...")
+logger.info("Esperando a que process1_step5 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -1781,19 +1781,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step5 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step5 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step5.")
+        logger.info("Aún no se encuentra el iframe process1_step5.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step5 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step5.")
+logger.info("Entré correctamente al iframe process1_step5.")
 
 
 # Presionar botón Confirmar
@@ -1802,7 +1802,7 @@ def presionar_boton_confirmar(driver):
     Hace clic en el botón 'Confirmar' del formulario actual.
     Dispara correctamente los eventos GeneXus (BeforeClick, gx.evt).
     """
-    print("Haciendo clic en el botón Confirmar...")
+    logger.info("Haciendo clic en el botón Confirmar...")
     try:
         # Esperar a que el botón sea visible y clickeable
         boton_confirmar = WebDriverWait(driver, 20).until(
@@ -1817,7 +1817,7 @@ def presionar_boton_confirmar(driver):
 
         # Clic real en el botón
         boton_confirmar.click()
-        print("Botón Confirmar clickeado correctamente.")
+        logger.info("Botón Confirmar clickeado correctamente.")
 
         # Forzar el evento GeneXus (en caso de que el click nativo no lo dispare)
         driver.execute_script(
@@ -1836,7 +1836,7 @@ def presionar_boton_confirmar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar botón Confirmar: {e}")
+        logger.info(f"Error al presionar botón Confirmar: {e}")
 
 
 # llamar al step: Presionar botón Confirmar
@@ -1844,16 +1844,16 @@ presionar_boton_confirmar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step8 esté visible (con reintento)
-print("Esperando a que process1_step5 cambie a visible...")
+logger.info("Esperando a que process1_step5 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -1863,19 +1863,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step8 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step8 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step8.")
+        logger.info("Aún no se encuentra el iframe process1_step8.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step8 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step8.")
+logger.info("Entré correctamente al iframe process1_step8.")
 
 
 # Presionar botón Continuar
@@ -1884,7 +1884,7 @@ def presionar_boton_continuar(driver):
     Hace clic en el botón 'Continuar' del formulario actual.
     Dispara correctamente los eventos GeneXus (BeforeClick, gx.evt).
     """
-    print("Haciendo clic en el botón Continuar...")
+    logger.info("Haciendo clic en el botón Continuar...")
     try:
         # Esperar a que el botón esté visible y clickeable
         boton_continuar = WebDriverWait(driver, 20).until(
@@ -1899,7 +1899,7 @@ def presionar_boton_continuar(driver):
 
         # Clic real en el botón
         boton_continuar.click()
-        print("Botón Continuar clickeado correctamente.")
+        logger.info("Botón Continuar clickeado correctamente.")
 
         # Forzar el evento GeneXus (en caso de que el click nativo no lo dispare)
         driver.execute_script(
@@ -1918,7 +1918,7 @@ def presionar_boton_continuar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar botón Continuar: {e}")
+        logger.info(f"Error al presionar botón Continuar: {e}")
 
 
 # llamar al step: Presionar botón Continuar
@@ -1926,16 +1926,16 @@ presionar_boton_continuar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step9 esté visible (con reintento)
-print("Esperando a que process1_step5 cambie a visible...")
+logger.info("Esperando a que process1_step5 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -1945,19 +1945,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step9 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step9 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step9.")
+        logger.info("Aún no se encuentra el iframe process1_step9.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step9 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step9.")
+logger.info("Entré correctamente al iframe process1_step9.")
 
 
 # Presionar botón Confirmar
@@ -1966,7 +1966,7 @@ def presionar_boton_confirmar_openter(driver):
     Hace clic en el botón 'Confirmar' con clase 'OpEnterText'.
     Dispara correctamente los eventos GeneXus (BeforeClick, gx.evt.execEvt).
     """
-    print("Haciendo clic en el botón Confirmar (OpEnterText)...")
+    logger.info("Haciendo clic en el botón Confirmar (OpEnterText)...")
     try:
         # Esperar que el botón sea visible y clickeable
         boton_confirmar = WebDriverWait(driver, 20).until(
@@ -1986,7 +1986,7 @@ def presionar_boton_confirmar_openter(driver):
 
         # Clic real en el botón
         boton_confirmar.click()
-        print("Botón Confirmar clickeado correctamente.")
+        logger.info("Botón Confirmar clickeado correctamente.")
 
         # Forzar el evento GeneXus (si el click nativo no lo dispara)
         driver.execute_script(
@@ -2006,7 +2006,7 @@ def presionar_boton_confirmar_openter(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar botón Confirmar (OpEnterText): {e}")
+        logger.info(f"Error al presionar botón Confirmar (OpEnterText): {e}")
 
 
 # llamar al step: Presionar botón Confirmar
@@ -2014,16 +2014,16 @@ presionar_boton_confirmar_openter(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step10 esté visible (con reintento)
-print("Esperando a que process1_step10 cambie a visible...")
+logger.info("Esperando a que process1_step10 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -2033,34 +2033,34 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step10 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step10 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step10.")
+        logger.info("Aún no se encuentra el iframe process1_step10.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step10 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step10.")
+logger.info("Entré correctamente al iframe process1_step10.")
 
 # llamar al step: Presionar botón Confirmar
 presionar_boton_confirmar(driver)
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step11 esté visible (con reintento)
-print("Esperando a que process1_step11 cambie a visible...")
+logger.info("Esperando a que process1_step11 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -2070,19 +2070,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step11 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step11 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step11.")
+        logger.info("Aún no se encuentra el iframe process1_step11.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step11 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step11.")
+logger.info("Entré correctamente al iframe process1_step11.")
 
 
 # llamar al step: Presionar botón Continuar
@@ -2090,16 +2090,16 @@ presionar_boton_continuar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step12 esté visible (con reintento)
-print("Esperando a que process1_step12 cambie a visible...")
+logger.info("Esperando a que process1_step12 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -2109,23 +2109,23 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step12 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step12 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step12.")
+        logger.info("Aún no se encuentra el iframe process1_step12.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step12 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step12.")
+logger.info("Entré correctamente al iframe process1_step12.")
 
 
 # Paso previo: ya estás dentro de process1_step12
-print("Entré correctamente al iframe process1_step12.")
+logger.info("Entré correctamente al iframe process1_step12.")
 
 
 def presionar_boton_agregar_domicilio(driver):
@@ -2134,7 +2134,7 @@ def presionar_boton_agregar_domicilio(driver):
     asumiendo que el driver ya está dentro de ese iframe.
     No espera el iframe process1_step13 (se manejará por separado).
     """
-    print("Buscando botón 'Agregar' dentro del iframe process1_step12...")
+    logger.info("Buscando botón 'Agregar' dentro del iframe process1_step12...")
 
     try:
         # XPath acotado a la sección Domicilios (solo el botón correcto)
@@ -2152,7 +2152,7 @@ def presionar_boton_agregar_domicilio(driver):
         )
         time.sleep(0.2)
         boton_objetivo.click()
-        print(
+        logger.info(
             "Botón 'Agregar' (Domicilios) clickeado correctamente dentro del iframe 12."
         )
 
@@ -2168,7 +2168,7 @@ def presionar_boton_agregar_domicilio(driver):
         )
 
     except Exception as e:
-        print(f"Error al presionar botón 'Agregar' dentro del iframe 12: {e}")
+        logger.info(f"Error al presionar botón 'Agregar' dentro del iframe 12: {e}")
 
 
 # Ejecutar el paso
@@ -2176,16 +2176,16 @@ presionar_boton_agregar_domicilio(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step13 esté visible (con reintento)
-print("Esperando a que process1_step13 cambie a visible...")
+logger.info("Esperando a que process1_step13 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -2195,19 +2195,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step13 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step13 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step13.")
+        logger.info("Aún no se encuentra el iframe process1_step13.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step13 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step13.")
+logger.info("Entré correctamente al iframe process1_step13.")
 
 
 # Ingresar un nombre de avenida aleatorio
@@ -2244,7 +2244,7 @@ def ingresar_nombre_avenida(driver):
 
         # Elegir una al azar
         avenida_elegida = random.choice(avenidas)
-        print(f"Ingresando nombre de avenida aleatorio: '{avenida_elegida}'...")
+        logger.info(f"Ingresando nombre de avenida aleatorio: '{avenida_elegida}'...")
 
         # Esperar que el campo esté presente y listo para interactuar
         campo_nombre = WebDriverWait(driver, 20).until(
@@ -2281,12 +2281,12 @@ def ingresar_nombre_avenida(driver):
         # Validar valor final
         valor_final = campo_nombre.get_attribute("value").strip()
         if valor_final:
-            print(f"Nombre de avenida ingresado correctamente: {valor_final}")
+            logger.info(f"Nombre de avenida ingresado correctamente: {valor_final}")
         else:
-            print("El campo vNOM1 quedó vacío, revisar validación GeneXus.")
+            logger.info("El campo vNOM1 quedó vacío, revisar validación GeneXus.")
 
     except Exception as e:
-        print(f"Error al ingresar nombre de avenida: {e}")
+        logger.info(f"Error al ingresar nombre de avenida: {e}")
 
 
 # llamar al step: Ingresar un nombre de avenida aleatorio
@@ -2305,7 +2305,7 @@ def ingresar_numero_altura(driver):
     try:
         # Generar número aleatorio
         numero = random.randint(1000, 9999)
-        print(f"Ingresando número de altura aleatorio: {numero}")
+        logger.info(f"Ingresando número de altura aleatorio: {numero}")
 
         # Esperar a que el campo esté listo
         campo_numero = WebDriverWait(driver, 20).until(
@@ -2342,12 +2342,12 @@ def ingresar_numero_altura(driver):
         # Validar que se haya ingresado correctamente
         valor_final = campo_numero.get_attribute("value").strip()
         if valor_final:
-            print(f"Número ingresado correctamente: {valor_final}")
+            logger.info(f"Número ingresado correctamente: {valor_final}")
         else:
-            print("El campo vNOM2 quedó vacío, revisar validación GeneXus.")
+            logger.info("El campo vNOM2 quedó vacío, revisar validación GeneXus.")
 
     except Exception as e:
-        print(f"Error al ingresar número de altura: {e}")
+        logger.info(f"Error al ingresar número de altura: {e}")
 
 
 # llamar al step: Ingresar número aleatorio de 4 dígitos (altura de la avenida)
@@ -2361,7 +2361,7 @@ def ingresar_valor_uno_vNOM3(driver):
     simulando la interacción natural del usuario y disparando eventos GeneXus.
     """
     try:
-        print("Ingresando valor '1' en el campo vNOM3...")
+        logger.info("Ingresando valor '1' en el campo vNOM3...")
 
         # Esperar a que el campo esté presente y listo
         campo_vnom3 = WebDriverWait(driver, 20).until(
@@ -2398,14 +2398,14 @@ def ingresar_valor_uno_vNOM3(driver):
         # Validar valor final
         valor_final = campo_vnom3.get_attribute("value").strip()
         if valor_final == "1":
-            print("Valor '1' ingresado correctamente en vNOM3.")
+            logger.info("Valor '1' ingresado correctamente en vNOM3.")
         else:
-            print(
+            logger.info(
                 f"El campo vNOM3 no contiene el valor esperado. Valor actual: '{valor_final}'"
             )
 
     except Exception as e:
-        print(f"Error al ingresar valor en vNOM3: {e}")
+        logger.info(f"Error al ingresar valor en vNOM3: {e}")
 
 
 # llamar al step: Ingresar valor 1 en el campo vNOM3
@@ -2419,7 +2419,7 @@ def ingresar_valor_202_vNOM4(driver):
     respetando los eventos GeneXus (focus, change, blur).
     """
     try:
-        print("Ingresando valor '202' en el campo vNOM4...")
+        logger.info("Ingresando valor '202' en el campo vNOM4...")
 
         # Esperar que el campo esté visible y clickeable
         campo_vnom4 = WebDriverWait(driver, 20).until(
@@ -2456,12 +2456,12 @@ def ingresar_valor_202_vNOM4(driver):
         # Validar resultado
         valor_final = campo_vnom4.get_attribute("value").strip()
         if valor_final == "202":
-            print("Valor '202' ingresado correctamente en vNOM4.")
+            logger.info("Valor '202' ingresado correctamente en vNOM4.")
         else:
-            print(f"El valor en vNOM4 no coincide. Valor actual: '{valor_final}'")
+            logger.info(f"El valor en vNOM4 no coincide. Valor actual: '{valor_final}'")
 
     except Exception as e:
-        print(f"Error al ingresar valor en vNOM4: {e}")
+        logger.info(f"Error al ingresar valor en vNOM4: {e}")
 
 
 # llamar al step: Ingresar valor 202 en el campo vNOM4
@@ -2475,7 +2475,7 @@ def ingresar_valor_uno_vNOM5(driver):
     simulando la interacción natural del usuario y disparando los eventos GeneXus.
     """
     try:
-        print("Ingresando valor '1' en el campo vNOM5...")
+        logger.info("Ingresando valor '1' en el campo vNOM5...")
 
         # Esperar que el campo esté presente y clickeable
         campo_vnom5 = WebDriverWait(driver, 20).until(
@@ -2512,12 +2512,12 @@ def ingresar_valor_uno_vNOM5(driver):
         # Verificar valor final
         valor_final = campo_vnom5.get_attribute("value").strip()
         if valor_final == "1":
-            print("Valor '1' ingresado correctamente en vNOM5.")
+            logger.info("Valor '1' ingresado correctamente en vNOM5.")
         else:
-            print(f"El valor en vNOM5 no coincide. Valor actual: '{valor_final}'")
+            logger.info(f"El valor en vNOM5 no coincide. Valor actual: '{valor_final}'")
 
     except Exception as e:
-        print(f"Error al ingresar valor en vNOM5: {e}")
+        logger.info(f"Error al ingresar valor en vNOM5: {e}")
 
 
 # llamar al step: Ingresar valor 1 en el campo vNOM5
@@ -2531,7 +2531,7 @@ def ingresar_valor_uno_vNOM6(driver):
     respetando los eventos GeneXus (focus, change, blur).
     """
     try:
-        print("Ingresando valor '1' en el campo vNOM6...")
+        logger.info("Ingresando valor '1' en el campo vNOM6...")
 
         # Esperar a que el campo esté presente y clickeable
         campo_vnom6 = WebDriverWait(driver, 20).until(
@@ -2568,12 +2568,12 @@ def ingresar_valor_uno_vNOM6(driver):
         # Validar el valor final
         valor_final = campo_vnom6.get_attribute("value").strip()
         if valor_final == "1":
-            print("Valor '1' ingresado correctamente en vNOM6.")
+            logger.info("Valor '1' ingresado correctamente en vNOM6.")
         else:
-            print(f"El valor en vNOM6 no coincide. Valor actual: '{valor_final}'")
+            logger.info(f"El valor en vNOM6 no coincide. Valor actual: '{valor_final}'")
 
     except Exception as e:
-        print(f"Error al ingresar valor en vNOM6: {e}")
+        logger.info(f"Error al ingresar valor en vNOM6: {e}")
 
 
 # llamar al step: Ingresar valor 1 en el campo vNOM6
@@ -2587,7 +2587,7 @@ def seleccionar_provincia_buenos_aires(driver):
     disparando los eventos GeneXus correspondientes.
     """
     try:
-        print("Seleccionando provincia: BUENOS AIRES (valor='1')...")
+        logger.info("Seleccionando provincia: BUENOS AIRES (valor='1')...")
 
         # Esperar a que el combo esté visible y clickeable
         combo_provincia = WebDriverWait(driver, 20).until(
@@ -2623,12 +2623,12 @@ def seleccionar_provincia_buenos_aires(driver):
         # Verificar selección final
         opcion_seleccionada = select.first_selected_option.text.strip()
         if "BUENOS AIRES" in opcion_seleccionada.upper():
-            print(f"Provincia seleccionada correctamente: {opcion_seleccionada}")
+            logger.info(f"Provincia seleccionada correctamente: {opcion_seleccionada}")
         else:
-            print(f"Verificar selección, opción actual: {opcion_seleccionada}")
+            logger.info(f"Verificar selección, opción actual: {opcion_seleccionada}")
 
     except Exception as e:
-        print(f"Error al seleccionar provincia BUENOS AIRES: {e}")
+        logger.info(f"Error al seleccionar provincia BUENOS AIRES: {e}")
 
 
 # llamar al step: Seleccionar provincia BUENOS AIRES
@@ -2642,7 +2642,7 @@ def seleccionar_localidad_valeria_del_mar(driver):
     disparando los eventos GeneXus correspondientes (onchange, onblur).
     """
     try:
-        print("Seleccionando localidad: VALERIA DEL MAR (valor='1833')...")
+        logger.info("Seleccionando localidad: VALERIA DEL MAR (valor='1833')...")
 
         # Esperar que el combo sea visible y clickeable
         combo_localidad = WebDriverWait(driver, 20).until(
@@ -2678,12 +2678,12 @@ def seleccionar_localidad_valeria_del_mar(driver):
         # Confirmar la selección
         opcion = select.first_selected_option.text.strip()
         if "VALERIA DEL MAR" in opcion.upper():
-            print(f"Localidad seleccionada correctamente: {opcion}")
+            logger.info(f"Localidad seleccionada correctamente: {opcion}")
         else:
-            print(f"Verificar selección. Opción actual: {opcion}")
+            logger.info(f"Verificar selección. Opción actual: {opcion}")
 
     except Exception as e:
-        print(f"Error al seleccionar localidad VALERIA DEL MAR: {e}")
+        logger.info(f"Error al seleccionar localidad VALERIA DEL MAR: {e}")
 
 
 # llamar al step: Seleccionar localidad VALERIA DEL MAR
@@ -2697,7 +2697,7 @@ def seleccionar_otro_vFSE005COL(driver):
     ejecutando los eventos GeneXus correspondientes.
     """
     try:
-        print("Seleccionando opción 'OTRO' (valor='25500') en vFSE005COL...")
+        logger.info("Seleccionando opción 'OTRO' (valor='25500') en vFSE005COL...")
 
         # Esperar a que el combo sea visible y clickeable
         combo_otro = WebDriverWait(driver, 20).until(
@@ -2733,12 +2733,12 @@ def seleccionar_otro_vFSE005COL(driver):
         # Verificar la opción seleccionada
         opcion_final = select.first_selected_option.text.strip()
         if "OTRO" in opcion_final.upper():
-            print(f"Opción seleccionada correctamente: {opcion_final}")
+            logger.info(f"Opción seleccionada correctamente: {opcion_final}")
         else:
-            print(f"Verificar selección. Opción actual: {opcion_final}")
+            logger.info(f"Verificar selección. Opción actual: {opcion_final}")
 
     except Exception as e:
-        print(f"Error al seleccionar opción 'OTRO' en vFSE005COL: {e}")
+        logger.info(f"Error al seleccionar opción 'OTRO' en vFSE005COL: {e}")
 
 
 # llamar al step: Seleccionar opción "OTRO"
@@ -2753,7 +2753,7 @@ def ingresar_codigo_postal(driver, codigo_postal="7166", max_reintentos=3):
     Ingresa el código postal (por defecto 7166) en el campo 'vCODPOS'.
     Reintenta si el valor no se aplica correctamente o el campo se recarga.
     """
-    print(f"Iniciando ingreso de código postal: {codigo_postal}")
+    logger.info(f"Iniciando ingreso de código postal: {codigo_postal}")
     intentos = 0
 
     while intentos < max_reintentos:
@@ -2803,22 +2803,22 @@ def ingresar_codigo_postal(driver, codigo_postal="7166", max_reintentos=3):
             valor_final = campo_cp.get_attribute("value").strip()
 
             if valor_final == codigo_postal:
-                print(f"Código postal confirmado correctamente: {valor_final}")
+                logger.info(f"Código postal confirmado correctamente: {valor_final}")
                 return True
             else:
-                print(
+                logger.info(
                     f"Valor leído: '{valor_final}'. Reintentando ({intentos+1}/{max_reintentos})..."
                 )
                 intentos += 1
                 time.sleep(1.0)
 
         except Exception as e:
-            print(f"Error en intento {intentos+1}: {e}")
+            logger.info(f"Error en intento {intentos+1}: {e}")
             intentos += 1
             time.sleep(1.0)
 
     # Si no se pudo confirmar después de varios intentos
-    print(
+    logger.info(
         "No se pudo ingresar el código postal correctamente después de varios intentos."
     )
     driver.save_screenshot("error_codigo_postal.png")
@@ -2836,7 +2836,7 @@ def presionar_boton_confirmar(driver):
     Hace clic en el botón 'Confirmar' (GeneXus) visible en pantalla.
     Aplica scroll, validación de visibilidad y ejecución del evento GX.
     """
-    print("Buscando botón 'Confirmar' en la pantalla actual...")
+    logger.info("Buscando botón 'Confirmar' en la pantalla actual...")
 
     try:
         # Esperar el botón clickeable
@@ -2850,7 +2850,7 @@ def presionar_boton_confirmar(driver):
         )
         time.sleep(0.3)
         boton_confirmar.click()
-        print("Botón 'Confirmar' clickeado correctamente.")
+        logger.info("Botón 'Confirmar' clickeado correctamente.")
 
         # Forzar evento GeneXus si es necesario
         driver.execute_script(
@@ -2866,7 +2866,7 @@ def presionar_boton_confirmar(driver):
         time.sleep(1)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Confirmar': {e}")
+        logger.info(f"Error al presionar el botón 'Confirmar': {e}")
 
 
 # Ejecutar el paso
@@ -2874,16 +2874,16 @@ presionar_boton_confirmar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step12 esté visible (con reintento)
-print("Esperando a que process1_step12 cambie a visible...")
+logger.info("Esperando a que process1_step12 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -2893,19 +2893,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step12 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step12 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step12.")
+        logger.info("Aún no se encuentra el iframe process1_step12.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step12 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step12.")
+logger.info("Entré correctamente al iframe process1_step12.")
 
 
 # Seleccionar fila "Particular/Social" sin forzar execEvt por defecto
@@ -2947,7 +2947,7 @@ def seleccionar_registro_particular_social(driver, forzar_evento=False):
             time.sleep(0.2)
         return False
 
-    print("Buscando registro 'Particular/Social' en la tabla...")
+    logger.info("Buscando registro 'Particular/Social' en la tabla...")
 
     try:
         # 1) Localizar y llevar al centro
@@ -2969,21 +2969,21 @@ def seleccionar_registro_particular_social(driver, forzar_evento=False):
                 )
             )
             registro.click()
-            print("Click normal sobre 'Particular/Social'.")
+            logger.info("Click normal sobre 'Particular/Social'.")
         except Exception as e:
             driver.execute_script(
                 "arguments[0].dispatchEvent(new MouseEvent('click', {bubbles:true}));",
                 registro,
             )
-            print(
+            logger.info(
                 f"Click forzado (dispatchEvent) sobre 'Particular/Social'. Detalle: {e}"
             )
 
         # 3) Esperar a que GX termine de procesar y libere la UI
         if esperar_fin_ajax_gx(timeout=10):
-            print("UI liberada tras la selección (sin execEvt).")
+            logger.info("UI liberada tras la selección (sin execEvt).")
         else:
-            print("Timeout esperando fin de AJAX/overlay.")
+            logger.info("Timeout esperando fin de AJAX/overlay.")
 
         # 4) PLAN B (opcional y una sola vez): forzar evento correcto
         if forzar_evento:
@@ -3002,12 +3002,12 @@ def seleccionar_registro_particular_social(driver, forzar_evento=False):
             )
             # Espera corta posterior
             esperar_fin_ajax_gx(timeout=8)
-            print("execEvt plan B ejecutado.")
+            logger.info("execEvt plan B ejecutado.")
 
         time.sleep(0.5)
 
     except Exception as e:
-        print(f"Error al seleccionar registro 'Particular/Social': {e}")
+        logger.info(f"Error al seleccionar registro 'Particular/Social': {e}")
 
 
 # Ejecutar el paso (sin forzar evento)
@@ -3031,7 +3031,7 @@ def esperar_sin_overlay(driver, timeout=20):
 
 
 def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=40):
-    print("Intentando abrir 'Teléfonos' (control GX BTNOPTELEF)...")
+    logger.info("Intentando abrir 'Teléfonos' (control GX BTNOPTELEF)...")
     try:
         # 0) Asegurar que no haya overlay bloqueando
         esperar_sin_overlay(driver, 20)
@@ -3055,7 +3055,7 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
                 )
             )
             link.click()
-            print("Clic normal en <a> 'Teléfonos'.")
+            logger.info("Clic normal en <a> 'Teléfonos'.")
         except (
             ElementClickInterceptedException,
             StaleElementReferenceException,
@@ -3064,12 +3064,12 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
             # 3) Actions
             try:
                 ActionChains(driver).move_to_element(link).pause(0.1).click().perform()
-                print("Clic con Actions en 'Teléfonos'.")
+                logger.info("Clic con Actions en 'Teléfonos'.")
             except Exception:
                 # 4) JS click + MouseEvent
                 try:
                     driver.execute_script("arguments[0].click();", link)
-                    print("JS click en 'Teléfonos'.")
+                    logger.info("JS click en 'Teléfonos'.")
                 except Exception:
                     driver.execute_script(
                         """
@@ -3078,7 +3078,7 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
                     """,
                         link,
                     )
-                    print("MouseEvent('click') disparado en 'Teléfonos'.")
+                    logger.info("MouseEvent('click') disparado en 'Teléfonos'.")
 
         # 5) Forzar eventos GeneXus sobre el control (span) y/o el <a>
         try:
@@ -3115,7 +3115,7 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
                 })();
             """
             )
-            print("Handlers GeneXus forzados (best-effort).")
+            logger.info("Handlers GeneXus forzados (best-effort).")
         except Exception:
             pass
 
@@ -3125,7 +3125,7 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
 
         # 7) (OPCIONAL) Esperar iframe siguiente si te sirve verificar acá
         if esperar_iframe_name:
-            print(f"Esperando iframe '{esperar_iframe_name}' visible...")
+            logger.info(f"Esperando iframe '{esperar_iframe_name}' visible...")
             ok = False
             for i in range(timeout_iframe):
                 driver.switch_to.default_content()
@@ -3141,7 +3141,7 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
                         visible = True
                         break
                 if visible:
-                    print(
+                    logger.info(
                         f"Iframe '{esperar_iframe_name}' visible tras {i+1} intentos."
                     )
                     ok = True
@@ -3152,9 +3152,9 @@ def presionar_boton_telefonos(driver, esperar_iframe_name=None, timeout_iframe=4
                     f"No apareció iframe '{esperar_iframe_name}' tras el clic en 'Teléfonos'."
                 )
 
-        print("Paso 'Teléfonos' procesado.")
+        logger.info("Paso 'Teléfonos' procesado.")
     except Exception as e:
-        print(f"Error al presionar 'Teléfonos': {e}")
+        logger.info(f"Error al presionar 'Teléfonos': {e}")
 
 
 # Ejecutar el paso
@@ -3218,11 +3218,11 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
         return False
 
     for intento in range(1, max_reintentos + 1):
-        print(f"[Intento {intento}] Click en 'Agregar' dentro de process1_step15...")
+        logger.info(f"[Intento {intento}] Click en 'Agregar' dentro de process1_step15...")
 
         # 1) Entrar al step15 (contexto correcto para el botón)
         if not entrar_a_step("process1_step15"):
-            print("No pude entrar a process1_step15.")
+            logger.info("No pude entrar a process1_step15.")
             continue
 
         esperar_sin_overlay(8)
@@ -3245,7 +3245,7 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
             """
             )
             if not boton:
-                print("No encontré botón 'Agregar' dentro de process1_step15.")
+                logger.info("No encontré botón 'Agregar' dentro de process1_step15.")
                 continue
 
         # 3) Scroll + click (normal, luego fallback JS si hace falta)
@@ -3253,14 +3253,14 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
         time.sleep(0.2)
         try:
             boton.click()
-            print("Click normal en 'Agregar'.")
+            logger.info("Click normal en 'Agregar'.")
         except (
             ElementClickInterceptedException,
             StaleElementReferenceException,
             TimeoutException,
         ) as e:
             driver.execute_script("arguments[0].click();", boton)
-            print(f"Click JS en 'Agregar'. Detalle: {e}")
+            logger.info(f"Click JS en 'Agregar'. Detalle: {e}")
 
         # (Opcional) empujón GX con prudencia (sin romper estados)
         try:
@@ -3285,10 +3285,10 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
             )
             driver.switch_to.frame(root)
         except TimeoutException:
-            print("No pude reingresar al iframe id='1' para validar step siguiente.")
+            logger.info("No pude reingresar al iframe id='1' para validar step siguiente.")
             continue
 
-        print(f"Esperando '{next_iframe}' visible...")
+        logger.info(f"Esperando '{next_iframe}' visible...")
         ok = False
         for i in range(20):
             frames = driver.find_elements(By.XPATH, f"//iframe[@name='{next_iframe}']")
@@ -3297,7 +3297,7 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
                 style = (f.get_attribute("style") or "").replace(" ", "").lower()
                 if "visibility:visible" in style and ("opacity:1" in style):
                     ok = True
-                    print(f"'{next_iframe}' visible en {i+1} intentos.")
+                    logger.info(f"'{next_iframe}' visible en {i+1} intentos.")
                     break
             time.sleep(1)
 
@@ -3308,11 +3308,11 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
             )
             return True
         else:
-            print("No apareció el step siguiente; reintentamos el click en Agregar.")
+            logger.info("No apareció el step siguiente; reintentamos el click en Agregar.")
 
     # Si agotó reintentos:
     driver.switch_to.default_content()
-    print(
+    logger.info(
         "No se pudo abrir el formulario de Alta ('process1_step16'). Evidencia: error_boton_agregar.png"
     )
     return False
@@ -3329,7 +3329,7 @@ def ingresar_prefijo_aux(driver, valor="11", intentos=3):
     Incluye reintento y disparo de eventos GeneXus (focus/change/blur).
     """
 
-    print(f"Intentando ingresar '{valor}' en el campo vPREFIJOAUX...")
+    logger.info(f"Intentando ingresar '{valor}' en el campo vPREFIJOAUX...")
 
     for intento in range(1, intentos + 1):
         try:
@@ -3355,7 +3355,7 @@ def ingresar_prefijo_aux(driver, valor="11", intentos=3):
 
             campo.clear()
             campo.send_keys(valor)
-            print(f"Valor '{valor}' ingresado (intento {intento}).")
+            logger.info(f"Valor '{valor}' ingresado (intento {intento}).")
 
             # Disparar eventos GeneXus
             driver.execute_script(
@@ -3374,16 +3374,16 @@ def ingresar_prefijo_aux(driver, valor="11", intentos=3):
 
             # Confirmar valor
             if campo.get_attribute("value").strip() == valor:
-                print(f"Verificación OK: '{valor}' seteado correctamente.")
+                logger.info(f"Verificación OK: '{valor}' seteado correctamente.")
                 return
             else:
                 raise Exception("Valor no seteado correctamente")
 
         except Exception as e:
-            print(f"Intento {intento} falló: {e}")
+            logger.info(f"Intento {intento} falló: {e}")
             time.sleep(1)
 
-    print("No se pudo ingresar el valor tras múltiples intentos.")
+    logger.info("No se pudo ingresar el valor tras múltiples intentos.")
 
 
 # Ejecutar el paso
@@ -3397,7 +3397,7 @@ def ingresar_telefono_aux(driver, valor="12345678", intentos=3):
     Incluye reintento y disparo de eventos GeneXus.
     """
 
-    print(f"Intentando ingresar '{valor}' en el campo vTELEFONOAUX...")
+    logger.info(f"Intentando ingresar '{valor}' en el campo vTELEFONOAUX...")
 
     for intento in range(1, intentos + 1):
         try:
@@ -3422,7 +3422,7 @@ def ingresar_telefono_aux(driver, valor="12345678", intentos=3):
 
             campo.clear()
             campo.send_keys(valor)
-            print(f"Valor '{valor}' ingresado (intento {intento}).")
+            logger.info(f"Valor '{valor}' ingresado (intento {intento}).")
 
             driver.execute_script(
                 """
@@ -3439,16 +3439,16 @@ def ingresar_telefono_aux(driver, valor="12345678", intentos=3):
             )
 
             if campo.get_attribute("value").strip() == valor:
-                print(f"Verificación OK: '{valor}' seteado correctamente.")
+                logger.info(f"Verificación OK: '{valor}' seteado correctamente.")
                 return
             else:
                 raise Exception("Valor no seteado correctamente")
 
         except Exception as e:
-            print(f"Intento {intento} falló: {e}")
+            logger.info(f"Intento {intento} falló: {e}")
             time.sleep(1)
 
-    print("No se pudo ingresar el número tras múltiples intentos.")
+    logger.info("No se pudo ingresar el número tras múltiples intentos.")
 
 
 # Ejecutar el paso
@@ -3462,7 +3462,7 @@ def ingresar_dotlexp(driver, valor="1", intentos=3):
     Incluye reintento y disparo de eventos GeneXus (focus/change/blur).
     """
 
-    print(f"Intentando ingresar '{valor}' en el campo vDOTLEXP...")
+    logger.info(f"Intentando ingresar '{valor}' en el campo vDOTLEXP...")
 
     for intento in range(1, intentos + 1):
         try:
@@ -3488,7 +3488,7 @@ def ingresar_dotlexp(driver, valor="1", intentos=3):
 
             campo.clear()
             campo.send_keys(valor)
-            print(f"Valor '{valor}' ingresado (intento {intento}).")
+            logger.info(f"Valor '{valor}' ingresado (intento {intento}).")
 
             # Disparar eventos GeneXus
             driver.execute_script(
@@ -3507,16 +3507,16 @@ def ingresar_dotlexp(driver, valor="1", intentos=3):
 
             # Verificar el valor
             if campo.get_attribute("value").strip() == valor:
-                print(f"Verificación OK: '{valor}' seteado correctamente.")
+                logger.info(f"Verificación OK: '{valor}' seteado correctamente.")
                 return
             else:
                 raise Exception("Valor no seteado correctamente")
 
         except Exception as e:
-            print(f"Intento {intento} falló: {e}")
+            logger.info(f"Intento {intento} falló: {e}")
             time.sleep(1)
 
-    print("No se pudo ingresar el valor tras múltiples intentos.")
+    logger.info("No se pudo ingresar el valor tras múltiples intentos.")
 
 
 # Ejecutar el paso
@@ -3530,7 +3530,7 @@ def ingresar_dofaxp(driver, valor="AUTOMATION", intentos=3):
     Incluye reintento, mayúsculas automáticas y eventos GeneXus.
     """
 
-    print(f"Intentando ingresar '{valor}' en el campo vDOFAXP...")
+    logger.info(f"Intentando ingresar '{valor}' en el campo vDOFAXP...")
 
     for intento in range(1, intentos + 1):
         try:
@@ -3556,7 +3556,7 @@ def ingresar_dofaxp(driver, valor="AUTOMATION", intentos=3):
 
             campo.clear()
             campo.send_keys(valor)
-            print(f"Valor '{valor}' ingresado (intento {intento}).")
+            logger.info(f"Valor '{valor}' ingresado (intento {intento}).")
 
             # Disparar eventos GeneXus
             driver.execute_script(
@@ -3576,7 +3576,7 @@ def ingresar_dofaxp(driver, valor="AUTOMATION", intentos=3):
             # Confirmar valor en mayúsculas
             current_value = campo.get_attribute("value").strip()
             if current_value == valor.upper():
-                print(f"Verificación OK: '{current_value}' seteado correctamente.")
+                logger.info(f"Verificación OK: '{current_value}' seteado correctamente.")
                 return
             else:
                 raise Exception(
@@ -3584,10 +3584,10 @@ def ingresar_dofaxp(driver, valor="AUTOMATION", intentos=3):
                 )
 
         except Exception as e:
-            print(f"Intento {intento} falló: {e}")
+            logger.info(f"Intento {intento} falló: {e}")
             time.sleep(1)
 
-    print("No se pudo ingresar el texto tras múltiples intentos.")
+    logger.info("No se pudo ingresar el texto tras múltiples intentos.")
 
 
 # Ejecutar el paso
@@ -3601,7 +3601,7 @@ def presionar_boton_confirmar(driver):
     Asegura contexto correcto y dispara el evento GX correspondiente.
     """
 
-    print("Buscando botón 'Confirmar' dentro del iframe process1_step16...")
+    logger.info("Buscando botón 'Confirmar' dentro del iframe process1_step16...")
 
     try:
         # Asegurar que estamos en el contexto correcto
@@ -3630,7 +3630,7 @@ def presionar_boton_confirmar(driver):
         driver.execute_script("arguments[0].scrollIntoView({block:'center'});", boton)
         time.sleep(0.3)
         boton.click()
-        print("Click normal realizado sobre 'Confirmar'.")
+        logger.info("Click normal realizado sobre 'Confirmar'.")
 
         # Disparar evento GeneXus (por seguridad)
         driver.execute_script(
@@ -3652,10 +3652,10 @@ def presionar_boton_confirmar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Confirmar': {e}")
+        logger.info(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("click_boton_confirmar")
+        logger.info("click_boton_confirmar")
 
 
 # Ejecutar el paso
@@ -3670,7 +3670,7 @@ def presionar_boton_si(driver):
     Ejecuta el evento GX correspondiente y espera la transición posterior.
     """
 
-    print("Buscando botón 'Sí' en el cuadro de confirmación...")
+    logger.info("Buscando botón 'Sí' en el cuadro de confirmación...")
 
     try:
         boton_si = None
@@ -3691,7 +3691,7 @@ def presionar_boton_si(driver):
                         (By.XPATH, "//a[normalize-space(text())='Sí']")
                     )
                 )
-                print("Botón 'Sí' encontrado dentro del iframe process1_step16.")
+                logger.info("Botón 'Sí' encontrado dentro del iframe process1_step16.")
         except Exception:
             # Si no está en el iframe, seguimos con el plan B
             pass
@@ -3704,7 +3704,7 @@ def presionar_boton_si(driver):
                     (By.XPATH, "//a[normalize-space(text())='Sí']")
                 )
             )
-            print("Botón 'Sí' encontrado en el nivel global (default_content).")
+            logger.info("Botón 'Sí' encontrado en el nivel global (default_content).")
 
         # Desplazarlo al centro
         driver.execute_script(
@@ -3714,7 +3714,7 @@ def presionar_boton_si(driver):
 
         # Click real
         boton_si.click()
-        print("Click normal realizado sobre el botón 'Sí'.")
+        logger.info("Click normal realizado sobre el botón 'Sí'.")
 
         # Disparar evento GeneXus (por seguridad)
         driver.execute_script(
@@ -3738,13 +3738,13 @@ def presionar_boton_si(driver):
                 (By.XPATH, "//a[normalize-space(text())='Sí']")
             )
         )
-        print("Modal de confirmación cerrado correctamente.")
+        logger.info("Modal de confirmación cerrado correctamente.")
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Sí': {e}")
+        logger.info(f"Error al presionar el botón 'Sí': {e}")
 
     finally:
-        print("click_boton_si")
+        logger.info("click_boton_si")
 
 
 # Ejecutar el paso
@@ -3752,16 +3752,16 @@ presionar_boton_si(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step15 esté visible (con reintento)
-print("Esperando a que process1_step15 cambie a visible...")
+logger.info("Esperando a que process1_step15 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -3771,19 +3771,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step15 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step15 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step15.")
+        logger.info("Aún no se encuentra el iframe process1_step15.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step15 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step15.")
+logger.info("Entré correctamente al iframe process1_step15.")
 
 
 # Hacer clic en botón "Finalizar" (ya dentro del iframe process1_step15)
@@ -3794,7 +3794,7 @@ def presionar_boton_finalizar(driver):
     Dispara el evento GX por seguridad.
     """
 
-    print("Buscando botón 'Finalizar' dentro del iframe actual...")
+    logger.info("Buscando botón 'Finalizar' dentro del iframe actual...")
 
     try:
         # Esperar el enlace <a> con texto 'Finalizar'
@@ -3810,7 +3810,7 @@ def presionar_boton_finalizar(driver):
         )
         time.sleep(0.3)
         boton_finalizar.click()
-        print("Click normal realizado sobre el botón 'Finalizar'.")
+        logger.info("Click normal realizado sobre el botón 'Finalizar'.")
 
         # Disparar evento GeneXus (por seguridad)
         driver.execute_script(
@@ -3832,10 +3832,10 @@ def presionar_boton_finalizar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Finalizar': {e}")
+        logger.info(f"Error al presionar el botón 'Finalizar': {e}")
 
     finally:
-        print("click_boton_finalizar")
+        logger.info("click_boton_finalizar")
 
 
 # Ejecutar el paso
@@ -3843,16 +3843,16 @@ presionar_boton_finalizar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step12 esté visible (con reintento)
-print("Esperando a que process1_step12 cambie a visible...")
+logger.info("Esperando a que process1_step12 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -3862,19 +3862,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step15 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step15 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step12.")
+        logger.info("Aún no se encuentra el iframe process1_step12.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step12 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step12.")
+logger.info("Entré correctamente al iframe process1_step12.")
 
 
 # Hacer clic en botón "Confirmar" (ya dentro del iframe activo)
@@ -3884,7 +3884,7 @@ def presionar_boton_confirmar(driver):
     Ejecuta también el evento GeneXus correspondiente.
     """
 
-    print("Buscando botón 'Confirmar' dentro del iframe actual...")
+    logger.info("Buscando botón 'Confirmar' dentro del iframe actual...")
 
     try:
         # Esperar el enlace <a> con texto 'Confirmar'
@@ -3902,7 +3902,7 @@ def presionar_boton_confirmar(driver):
 
         # Click real
         boton_confirmar.click()
-        print("Click normal realizado sobre el botón 'Confirmar'.")
+        logger.info("Click normal realizado sobre el botón 'Confirmar'.")
 
         # Disparar evento GeneXus (por seguridad)
         driver.execute_script(
@@ -3924,26 +3924,26 @@ def presionar_boton_confirmar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Confirmar': {e}")
+        logger.info(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("click_boton_confirmar")
+        logger.info("click_boton_confirmar")
 
 
 # Ejecutar el paso
 presionar_boton_confirmar(driver)
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step19 esté visible (con reintento)
-print("Esperando a que process1_step19 cambie a visible...")
+logger.info("Esperando a que process1_step19 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -3953,19 +3953,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step19 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step19 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step19.")
+        logger.info("Aún no se encuentra el iframe process1_step19.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step19 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step19.")
+logger.info("Entré correctamente al iframe process1_step19.")
 
 
 # Hacer clic en botón "Confirmar" (GX data-gx-evt=5)
@@ -3976,7 +3976,7 @@ def presionar_boton_confirmar(driver):
     Ejecuta click real y dispara el evento GeneXus para garantizar la acción.
     """
 
-    print("Buscando botón 'Confirmar' (GeneXus)...")
+    logger.info("Buscando botón 'Confirmar' (GeneXus)...")
 
     try:
         # Esperar el botón <a> con texto 'Confirmar' y atributo data-gx-evt="5"
@@ -3997,7 +3997,7 @@ def presionar_boton_confirmar(driver):
 
         # Click real
         boton_confirmar.click()
-        print("Click normal realizado sobre el botón 'Confirmar'.")
+        logger.info("Click normal realizado sobre el botón 'Confirmar'.")
 
         # Disparar evento GeneXus manualmente (por seguridad)
         driver.execute_script(
@@ -4019,26 +4019,26 @@ def presionar_boton_confirmar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Confirmar': {e}")
+        logger.info(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("click_boton_confirmar")
+        logger.info("click_boton_confirmar")
 
 
 presionar_boton_confirmar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step20 esté visible (con reintento)
-print("Esperando a que process1_step19 cambie a visible...")
+logger.info("Esperando a que process1_step19 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -4048,19 +4048,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step20 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step20 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step20.")
+        logger.info("Aún no se encuentra el iframe process1_step20.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step20 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step20.")
+logger.info("Entré correctamente al iframe process1_step20.")
 
 
 # Hacer clic en botón "Sí" (BTNOPSI) dentro del iframe process1_step20
@@ -4082,10 +4082,10 @@ def presionar_boton_si_en_step20(driver):
         driver.switch_to.frame(step)
 
     try:
-        print("Entrando a process1_step20…")
+        logger.info("Entrando a process1_step20…")
         entrar_a_step20()
 
-        print("Buscando botón 'Sí' (BTNOPSI)…")
+        logger.info("Buscando botón 'Sí' (BTNOPSI)…")
         # Preferimos el <a> dentro del span BTNOPSI
         a_si = WebDriverWait(driver, 10).until(
             EC.element_to_be_clickable((By.CSS_SELECTOR, "#BTNOPSI > a"))
@@ -4098,10 +4098,10 @@ def presionar_boton_si_en_step20(driver):
         # Click normal con fallback JS
         try:
             a_si.click()
-            print("Click normal sobre 'Sí'.")
+            logger.info("Click normal sobre 'Sí'.")
         except Exception as e:
             driver.execute_script("arguments[0].click();", a_si)
-            print(f"Click JS sobre 'Sí'. Detalle: {e}")
+            logger.info(f"Click JS sobre 'Sí'. Detalle: {e}")
 
         # Empujón GeneXus: linkClick + execEvt
         try:
@@ -4127,7 +4127,7 @@ def presionar_boton_si_en_step20(driver):
             """,
                 a_si,
             )
-            print("Eventos GeneXus disparados (best-effort).")
+            logger.info("Eventos GeneXus disparados (best-effort).")
         except Exception:
             pass
 
@@ -4135,25 +4135,25 @@ def presionar_boton_si_en_step20(driver):
         time.sleep(1.2)
 
     except Exception as e:
-        print(f"Error al presionar 'Sí' (BTNOPSI): {e}")
+        logger.info(f"Error al presionar 'Sí' (BTNOPSI): {e}")
     finally:
-        print("click_boton_si_step20")
+        logger.info("click_boton_si_step20")
 
 
 presionar_boton_si_en_step20(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step21 esté visible (con reintento)
-print("Esperando a que process1_step21 cambie a visible...")
+logger.info("Esperando a que process1_step21 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -4163,19 +4163,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step21 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step21 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step21.")
+        logger.info("Aún no se encuentra el iframe process1_step21.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step21 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step21.")
+logger.info("Entré correctamente al iframe process1_step21.")
 
 
 
@@ -4269,7 +4269,7 @@ def presionar_boton_finalizar(driver):
     Ejecuta click real y dispara los eventos GX necesarios.
     """
 
-    print("Buscando botón 'Finalizar' dentro del iframe actual...")
+    logger.info("Buscando botón 'Finalizar' dentro del iframe actual...")
 
     try:
         # Esperar el enlace <a> con texto Finalizar
@@ -4288,10 +4288,10 @@ def presionar_boton_finalizar(driver):
         # Intentar click normal con fallback JS
         try:
             boton_finalizar.click()
-            print("Click normal realizado sobre 'Finalizar'.")
+            logger.info("Click normal realizado sobre 'Finalizar'.")
         except Exception as e:
             driver.execute_script("arguments[0].click();", boton_finalizar)
-            print(f"Click JS alternativo ejecutado. Detalle: {e}")
+            logger.info(f"Click JS alternativo ejecutado. Detalle: {e}")
 
         # Disparar los eventos GeneXus (por seguridad)
         driver.execute_script(
@@ -4320,10 +4320,10 @@ def presionar_boton_finalizar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Finalizar': {e}")
+        logger.info(f"Error al presionar el botón 'Finalizar': {e}")
 
     finally:
-        print("click_boton_finalizar")
+        logger.info("click_boton_finalizar")
 
 
 # Ejecutar el paso
@@ -4331,16 +4331,16 @@ presionar_boton_finalizar(driver)
 
 
 # Esperar hasta que el iframe principal esté presente
-print("Esperando iframe principal id='1'...")
+logger.info("Esperando iframe principal id='1'...")
 driver.switch_to.default_content()
 iframe_principal = WebDriverWait(driver, 25).until(
     EC.presence_of_element_located((By.XPATH, "//iframe[@id='1']"))
 )
 driver.switch_to.frame(iframe_principal)
-print("Ingresé al iframe principal id='1'.")
+logger.info("Ingresé al iframe principal id='1'.")
 
 # Esperar hasta que process1_step22 esté visible (con reintento)
-print("Esperando a que process1_step22 cambie a visible...")
+logger.info("Esperando a que process1_step22 cambie a visible...")
 
 iframe_visible = None
 for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
@@ -4350,19 +4350,19 @@ for i in range(40):  # hasta 40 intentos (unos 40 segundos máx)
         style = f.get_attribute("style") or ""
         if "visibility: visible" in style and "opacity: 1" in style:
             iframe_visible = f
-            print(f"Iframe process1_step22 visible tras {i+1} intentos.")
+            logger.info(f"Iframe process1_step22 visible tras {i+1} intentos.")
             break
         else:
-            print(f"Intento {i+1}: todavía oculto ({style})")
+            logger.info(f"Intento {i+1}: todavía oculto ({style})")
     else:
-        print("Aún no se encuentra el iframe process1_step22.")
+        logger.info("Aún no se encuentra el iframe process1_step22.")
     time.sleep(1)
 
 if not iframe_visible:
     raise TimeoutException("El iframe process1_step22 nunca se volvió visible.")
 
 driver.switch_to.frame(iframe_visible)
-print("Entré correctamente al iframe process1_step22.")
+logger.info("Entré correctamente al iframe process1_step22.")
 
 
 # Hacer clic en botón "Confirmar" (ya dentro del iframe)
@@ -4372,7 +4372,7 @@ def presionar_boton_confirmar(driver):
     Realiza clic real con fallback JS y dispara los eventos GeneXus (gx.evt).
     """
 
-    print("Buscando botón 'Confirmar' dentro del iframe actual...")
+    logger.info("Buscando botón 'Confirmar' dentro del iframe actual...")
 
     try:
         # Esperar el enlace <a> con texto Confirmar
@@ -4391,10 +4391,10 @@ def presionar_boton_confirmar(driver):
         # Click normal con fallback JS si falla
         try:
             boton_confirmar.click()
-            print("Click normal realizado sobre 'Confirmar'.")
+            logger.info("Click normal realizado sobre 'Confirmar'.")
         except Exception as e:
             driver.execute_script("arguments[0].click();", boton_confirmar)
-            print(f"Click JS alternativo ejecutado. Detalle: {e}")
+            logger.info(f"Click JS alternativo ejecutado. Detalle: {e}")
 
         # Ejecutar los eventos GeneXus por seguridad
         driver.execute_script(
@@ -4423,10 +4423,10 @@ def presionar_boton_confirmar(driver):
         time.sleep(1.5)
 
     except Exception as e:
-        print(f"Error al presionar el botón 'Confirmar': {e}")
+        logger.info(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("FINALIZO EL FLUJO OK PORFINNNNN")
+        logger.info("FINALIZO EL FLUJO OK PORFINNNNN")
 
 
 # Ejecutar el paso

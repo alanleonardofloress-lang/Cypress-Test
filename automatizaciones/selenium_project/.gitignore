@@ -23,3 +23,40 @@ yarn-error.log*
 *.tmp
 *.swp
 
+# archivo eliminado
+automatizaciones/selenium_project/log_datos_cuenta.txt
+
+
+# Logs generales
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+*.txt
+
+# Archivos generados por Selenium (capturas, logs, temporales)
+*.png
+*.jpg
+*.jpeg
+*.csv
+
+# Carpetas temporales o caché
+__pycache__/
+*.pyc
+*.pyo
+
+# Configuración del IDE/Editor
+.vscode/
+.idea/
+
+# Archivos temporales
+*.tmp
+*.swp
+
+# Carpetas o archivos compartidos no versionables
+C:\Users\aflores\.jenkins\Compartida_con_test_bantotal\
+automatizaciones/selenium_project/log_datos_cuenta.txt
+
+# Entorno virtual
+venv/
+.env/
