@@ -1,5 +1,7 @@
 # Librerías externas
 # Ajuste de path para ejecución en Jenkins
+import sqlite3
+import logging
 import os
 import random
 import sys
@@ -20,6 +22,9 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import Select, WebDriverWait
 
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
@@ -39,7 +44,7 @@ from selenium_local.helpers.gx_helpers import (
     intentar_con_reintento,
 )
 
-HEADLESS = True  # Cambiar a True si querés ocultar el navegador
+HEADLESS = False  # Cambiar a True si querés ocultar el navegador
 
 chrome_options = Options()
 
@@ -3650,7 +3655,7 @@ def presionar_boton_confirmar(driver):
         print(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("Captura guardada como click_boton_confirmar.png")
+        print("click_boton_confirmar")
 
 
 # Ejecutar el paso
@@ -3739,7 +3744,7 @@ def presionar_boton_si(driver):
         print(f"Error al presionar el botón 'Sí': {e}")
 
     finally:
-        print("Captura guardada como click_boton_si.png")
+        print("click_boton_si")
 
 
 # Ejecutar el paso
@@ -3830,7 +3835,7 @@ def presionar_boton_finalizar(driver):
         print(f"Error al presionar el botón 'Finalizar': {e}")
 
     finally:
-        print("Captura guardada como click_boton_finalizar.png")
+        print("click_boton_finalizar")
 
 
 # Ejecutar el paso
@@ -3922,7 +3927,7 @@ def presionar_boton_confirmar(driver):
         print(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("Captura guardada como click_boton_confirmar.png")
+        print("click_boton_confirmar")
 
 
 # Ejecutar el paso
@@ -4017,7 +4022,7 @@ def presionar_boton_confirmar(driver):
         print(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("Captura guardada como click_boton_confirmar.png")
+        print("click_boton_confirmar")
 
 
 presionar_boton_confirmar(driver)
@@ -4132,7 +4137,7 @@ def presionar_boton_si_en_step20(driver):
     except Exception as e:
         print(f"Error al presionar 'Sí' (BTNOPSI): {e}")
     finally:
-        print("Captura guardada como click_boton_si_step20.png")
+        print("click_boton_si_step20")
 
 
 presionar_boton_si_en_step20(driver)
@@ -4173,52 +4178,87 @@ driver.switch_to.frame(iframe_visible)
 print("Entré correctamente al iframe process1_step21.")
 
 
-# Obtener número de cuenta y número de documento (dentro del iframe actual)
+
+
+
+# LOG DE DATOS DE CUENTA Y DOCUMENTO EN SQLITE
+
+
+def inicializar_tabla_logs():
+    """Crea la tabla logs_cuentas si no existe."""
+    conn = sqlite3.connect(DB_PATH)
+    cur = conn.cursor()
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS logs_cuentas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            fecha TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            numero_cuenta TEXT NOT NULL,
+            numero_documento TEXT NOT NULL
+        )
+        """
+    )
+    conn.commit()
+    conn.close()
+    logger.info("Tabla 'logs_cuentas' lista en la base SQLite.")
+
+
+def registrar_datos_cuenta(numero_cuenta, numero_documento):
+    """Inserta un registro en logs_cuentas."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cur = conn.cursor()
+        cur.execute(
+            "INSERT INTO logs_cuentas (numero_cuenta, numero_documento) VALUES (?, ?)",
+            (numero_cuenta, numero_documento),
+        )
+        conn.commit()
+        conn.close()
+        logger.info(f"Registro insertado: Cuenta={numero_cuenta}, Documento={numero_documento}")
+    except Exception as e:
+        logger.error(f"Error al registrar datos en logs_cuentas: {e}")
+
+
+
+# Crear tabla si no existe
+inicializar_tabla_logs()
+
+
+
+# Obtener y registrar datos de la cuenta creada
+
 def obtener_datos_cuenta_y_documento(driver):
     """
     Obtiene el número de cuenta (span_vCTNRO) y el número de documento (span_vNUMDOC_0001)
-    dentro del iframe actual, y los registra en el log local.
+    dentro del iframe actual, y los guarda en la tabla logs_cuentas de la base SQLite.
     """
-
-    print("Obteniendo datos de la cuenta y del documento...")
+    logger.info("Obteniendo datos de la cuenta y del documento...")
 
     try:
-        # No salimos del iframe: ya estamos en el contexto correcto
-
-        # Capturar número de cuenta
         cuenta_elem = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "span_vCTNRO"))
         )
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", cuenta_elem
-        )
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", cuenta_elem)
         numero_cuenta = cuenta_elem.text.strip()
-        print(f"Número de cuenta detectado: {numero_cuenta}")
+        logger.info(f"Número de cuenta detectado: {numero_cuenta}")
 
-        # Capturar número de documento
         documento_elem = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "span_vNUMDOC_0001"))
         )
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", documento_elem
-        )
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", documento_elem)
         numero_documento = documento_elem.text.strip()
-        print(f"Número de documento detectado: {numero_documento}")
+        logger.info(f"Número de documento detectado: {numero_documento}")
 
-        # Guardar ambos en el log local
-        with open("log_datos_cuenta.txt", "a", encoding="utf-8") as f:
-            f.write(f"\nCuenta: {numero_cuenta} | Documento: {numero_documento}\n")
-
-        print("Datos registrados correctamente en log_datos_cuenta.txt")
-
+        # Guardar en la base
+        registrar_datos_cuenta(numero_cuenta, numero_documento)
         return numero_cuenta, numero_documento
 
     except Exception as e:
-        print(f"Error al obtener datos de cuenta/documento: {e}")
+        logger.error(f"Error al obtener datos de cuenta/documento: {e}")
         return None, None
 
 
-#  Ejecutar el paso
+# invoca el paso anterior
 cuenta, documento = obtener_datos_cuenta_y_documento(driver)
 
 
@@ -4283,7 +4323,7 @@ def presionar_boton_finalizar(driver):
         print(f"Error al presionar el botón 'Finalizar': {e}")
 
     finally:
-        print("Captura guardada como click_boton_finalizar.png")
+        print("click_boton_finalizar")
 
 
 # Ejecutar el paso
@@ -4386,7 +4426,7 @@ def presionar_boton_confirmar(driver):
         print(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        print("Captura guardada como click_boton_confirmar FINALIZO EL FLUJO OK.png")
+        print("FINALIZO EL FLUJO OK PORFINNNNN")
 
 
 # Ejecutar el paso
