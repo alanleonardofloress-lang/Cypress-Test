@@ -2637,58 +2637,57 @@ seleccionar_provincia_buenos_aires(driver)
 
 
 # Seleccionar localidad VALERIA DEL MAR
-def seleccionar_localidad_valeria_del_mar(driver):
+def seleccionar_localidad_valeria_del_mar(driver, max_reintentos=3):
     """
-    Despliega el combo 'vXLOCCOD' y selecciona la opción con valor '1833' (VALERIA DEL MAR),
-    disparando los eventos GeneXus correspondientes (onchange, onblur).
+    Selecciona 'VALERIA DEL MAR' en el combo vXLOCCOD, con reintentos en caso de fallo.
     """
-    try:
-        logger.info("Seleccionando localidad: VALERIA DEL MAR (valor='1833')...")
+    for intento in range(1, max_reintentos + 1):
+        try:
+            logger.info(f"Seleccionando localidad: VALERIA DEL MAR (valor='1833')... (Intento {intento}/{max_reintentos})")
 
-        # Esperar que el combo sea visible y clickeable
-        combo_localidad = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.ID, "vXLOCCOD"))
-        )
+            combo_localidad = WebDriverWait(driver, 20).until(
+                EC.element_to_be_clickable((By.ID, "vXLOCCOD"))
+            )
 
-        # Hacer scroll hasta el elemento y desplegar
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", combo_localidad
-        )
-        time.sleep(0.3)
-        combo_localidad.click()
-        time.sleep(0.3)
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", combo_localidad)
+            time.sleep(0.3)
+            combo_localidad.click()
+            time.sleep(0.3)
 
-        # Seleccionar la opción por valor
-        select = Select(combo_localidad)
-        select.select_by_value("1833")
-        time.sleep(0.4)
+            select = Select(combo_localidad)
+            select.select_by_value("1833")
+            time.sleep(0.4)
 
-        # Disparar manualmente los eventos GeneXus
-        driver.execute_script(
-            """
-            const el = document.getElementById('vXLOCCOD');
-            el.dispatchEvent(new Event('change', {bubbles:true}));
-            el.dispatchEvent(new Event('blur', {bubbles:true}));
-            try {
-                if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
-                if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
-            } catch(e) {}
-        """
-        )
+            # Disparar manualmente los eventos GeneXus
+            driver.execute_script("""
+                const el = document.getElementById('vXLOCCOD');
+                el.dispatchEvent(new Event('change', {bubbles:true}));
+                el.dispatchEvent(new Event('blur', {bubbles:true}));
+                try {
+                    if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
+                    if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
+                } catch(e) {}
+            """)
 
-        # Confirmar la selección
-        opcion = select.first_selected_option.text.strip()
-        if "VALERIA DEL MAR" in opcion.upper():
-            logger.info(f"Localidad seleccionada correctamente: {opcion}")
-        else:
-            logger.info(f"Verificar selección. Opción actual: {opcion}")
+            opcion = select.first_selected_option.text.strip()
+            if "VALERIA DEL MAR" in opcion.upper():
+                logger.info(f"Localidad seleccionada correctamente: {opcion}")
+                return True  # Éxito → salir del bucle
+            else:
+                logger.info(f"Verificar selección (actual: {opcion}). Reintentando...")
 
-    except Exception as e:
-        logger.info(f"Error al seleccionar localidad VALERIA DEL MAR: {e}")
+        except Exception as e:
+            logger.info(f"Error al seleccionar localidad (intento {intento}/{max_reintentos}): {e}")
 
+        # Espera antes de reintentar
+        time.sleep(1.5)
 
-# llamar al step: Seleccionar localidad VALERIA DEL MAR
+    logger.info("No se pudo seleccionar la localidad VALERIA DEL MAR tras varios intentos.")
+    return False
+
+# ejecuta el paso de seleccion de localidad
 seleccionar_localidad_valeria_del_mar(driver)
+
 
 
 # Seleccionar opción "OTRO"
