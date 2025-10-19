@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 
-# Librerías locales (tu código)
+# Librerías locales (mi codigo)
 from selenium_local.helpers import (
     esperar_y_setear_combo,
     nivel_educativo_random,
@@ -44,7 +44,8 @@ from selenium_local.helpers.gx_helpers import (
     intentar_con_reintento,
 )
 
-HEADLESS = True  # Cambiar a True si querés ocultar el navegador
+# Cambiar a True si queremos ocultar el navegador
+HEADLESS = True  
 
 chrome_options = Options()
 
@@ -56,7 +57,7 @@ if HEADLESS:
     chrome_options.add_argument("--headless=new")
 
 # Opciones comunes
-# chrome_options.add_argument("--window-size=1920,1080")
+chrome_options.add_argument("--window-size=1920,1080")
 chrome_options.add_argument("--disable-gpu")
 chrome_options.add_argument("--no-sandbox")
 chrome_options.add_argument("--disable-dev-shm-usage")
