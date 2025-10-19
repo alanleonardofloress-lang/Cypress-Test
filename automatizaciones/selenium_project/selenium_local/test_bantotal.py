@@ -442,7 +442,7 @@ try:
         f"Generado CUIT (sin guiones): {cuit_no_guiones}  (DNI: {dni_generado}, pref: {pref})"
     )
     valor_final = inyectar_cuit(driver, cuit_no_guiones)
-    logger.info("Valor final en campo:", valor_final)
+    logger.info(f"Valor final en campo: {valor_final}")
 except Exception:
     logger.exception("Error general en generación/inyección de CUIT:")
 
@@ -4427,7 +4427,7 @@ def presionar_boton_confirmar(driver):
         logger.info(f"Error al presionar el botón 'Confirmar': {e}")
 
     finally:
-        logger.info("FINALIZO EL FLUJO OK PORFINNNNN")
+        logger.info("FINALIZO EL FLUJO:               SUCCESS")
 
 
 # Ejecutar el paso
