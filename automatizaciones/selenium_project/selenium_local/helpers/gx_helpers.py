@@ -54,7 +54,7 @@ def intentar_con_reintento(funcion, verificador, intentos=3, espera=1):
     return False
 
 
-# --- Función para elegir nivel educativo aleatorio ---
+# Función para elegir nivel educativo aleatorio 
 
 import random
 
@@ -131,7 +131,7 @@ def esperar_y_setear_combo(
         print(f"Combo '{field_id}' no reapareció tras el refresh.")
 
 
-# --- fecha aleatoria mayor a 18 años ---
+# fecha aleatoria mayor a 18 años 
 def completar_fecha_nacimiento(driver, field_id="vPFFNAC", edad_minima=20, timeout=10):
     # Calcular fecha aleatoria entre hace 60 años y edad mínima
     hoy = datetime.today()
