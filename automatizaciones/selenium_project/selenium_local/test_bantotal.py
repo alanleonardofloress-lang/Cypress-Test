@@ -2691,54 +2691,46 @@ seleccionar_localidad_valeria_del_mar(driver)
 
 
 # Seleccionar opción "OTRO"
-def seleccionar_otro_vFSE005COL(driver):
-    """
-    Despliega el combo 'vFSE005COL' y selecciona la opción con valor '25500' (OTRO),
-    ejecutando los eventos GeneXus correspondientes.
-    """
-    try:
-        logger.info("Seleccionando opción 'OTRO' (valor='25500') en vFSE005COL...")
+def seleccionar_otro_vFSE005COL(driver, max_intentos=3):
+    for intento in range(1, max_intentos + 1):
+        try:
+            logger.info(f"Intento {intento}: seleccionando opción 'OTRO' (valor='25500') en vFSE005COL...")
 
-        # Esperar a que el combo sea visible y clickeable
-        combo_otro = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.ID, "vFSE005COL"))
-        )
+            combo_otro = WebDriverWait(driver, 20).until(
+                EC.element_to_be_clickable((By.ID, "vFSE005COL"))
+            )
+            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", combo_otro)
+            time.sleep(0.3)
+            combo_otro.click()
+            time.sleep(0.3)
 
-        # Hacer scroll hasta el elemento y click para abrirlo
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", combo_otro
-        )
-        time.sleep(0.3)
-        combo_otro.click()
-        time.sleep(0.3)
+            select = Select(combo_otro)
+            select.select_by_value("25500")
+            time.sleep(0.4)
 
-        # Seleccionar la opción "OTRO" (valor 25500)
-        select = Select(combo_otro)
-        select.select_by_value("25500")
-        time.sleep(0.4)
+            driver.execute_script("""
+                const el = document.getElementById('vFSE005COL');
+                el.dispatchEvent(new Event('change', {bubbles:true}));
+                el.dispatchEvent(new Event('blur', {bubbles:true}));
+                try {
+                    if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
+                    if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
+                } catch(e) {}
+            """)
 
-        # Disparar manualmente eventos GeneXus
-        driver.execute_script(
-            """
-            const el = document.getElementById('vFSE005COL');
-            el.dispatchEvent(new Event('change', {bubbles:true}));
-            el.dispatchEvent(new Event('blur', {bubbles:true}));
-            try {
-                if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
-                if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
-            } catch(e) {}
-        """
-        )
+            opcion_final = select.first_selected_option.text.strip()
+            if "OTRO" in opcion_final.upper():
+                logger.info(f"Opción seleccionada correctamente en intento {intento}: {opcion_final}")
+                return
+            else:
+                logger.warning(f"Opción incorrecta ({opcion_final}). Reintentando...")
 
-        # Verificar la opción seleccionada
-        opcion_final = select.first_selected_option.text.strip()
-        if "OTRO" in opcion_final.upper():
-            logger.info(f"Opción seleccionada correctamente: {opcion_final}")
-        else:
-            logger.info(f"Verificar selección. Opción actual: {opcion_final}")
-
-    except Exception as e:
-        logger.info(f"Error al seleccionar opción 'OTRO' en vFSE005COL: {e}")
+        except Exception as e:
+            logger.warning(f"Error en intento {intento}: {e}")
+            if intento == max_intentos:
+                logger.error("Fallo tras varios intentos al seleccionar opción 'OTRO'.")
+            else:
+                time.sleep(1)
 
 
 # llamar al step: Seleccionar opción "OTRO"
