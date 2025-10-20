@@ -29,7 +29,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 
-# Librerías locales (mi codigo)
+# Librerías locales (de mi codigo)
 from selenium_local.helpers import (
     esperar_y_setear_combo,
     nivel_educativo_random,
@@ -49,7 +49,7 @@ HEADLESS = True
 
 chrome_options = Options()
 
-# Ignorar errores de certificado (siempre recomendable en entornos de testing)
+# Ignorar errores de certificado 
 chrome_options.add_argument("--ignore-certificate-errors")
 
 # Solo si se ejecuta sin interfaz
@@ -140,41 +140,34 @@ except Exception as e:
 
 
 # MENÚ PRINCIPAL
-def click_seguro(driver, wait, xpath, descripcion="elemento"):
-    try:
-        elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-        driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
-        time.sleep(0.3)
+def click_seguro(driver, wait, xpath, descripcion="elemento", max_intentos=3, delay_reintento=1):
+    for intento in range(1, max_intentos + 1):
         try:
-            ActionChains(driver).move_to_element(elem).click().perform()
-            logger.info(f"Se hizo clic en {descripcion}.")
-        except:
-            driver.execute_script("arguments[0].click();", elem)
-            logger.info(f"Clic en {descripcion} realizado mediante JavaScript.")
-        return True
-    except Exception as e:
-        logger.info(f"No se pudo hacer clic en {descripcion}: {e}")
-        return False
+            elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+            time.sleep(0.3)
+            try:
+                ActionChains(driver).move_to_element(elem).click().perform()
+                logger.info(f"Intento {intento}: clic en {descripcion} con ActionChains.")
+            except:
+                driver.execute_script("arguments[0].click();", elem)
+                logger.info(f"Intento {intento}: clic en {descripcion} con JavaScript.")
+            return True
+        except Exception as e:
+            logger.warning(f"Intento {intento} fallido para {descripcion}: {e}")
+            if intento < max_intentos:
+                time.sleep(delay_reintento)
+            else:
+                logger.error(f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos.")
+                return False
 
-
-click_seguro(
-    driver,
-    wait,
-    "//a[contains(@class,'menuButton') and normalize-space(text())='Inicio']",
-    "Inicio",
-)
-click_seguro(
-    driver,
-    wait,
-    "//a[contains(@class,'menuItem') and contains(text(),'Menú de Clientes')]",
-    "Menú de Clientes",
-)
-click_seguro(
-    driver,
-    wait,
-    "//a[contains(@class,'menuLeaf') and contains(text(),'Mantenimiento de Personas')]",
-    "Mantenimiento de Personas",
-)
+# invoca las acciones
+click_seguro(driver, wait, "//a[contains(@class,'menuButton') and normalize-space(text())='Inicio']", 
+             "Inicio")
+click_seguro(driver, wait, "//a[contains(@class,'menuItem') and contains(text(),'Menú de Clientes')]", 
+             "Menú de Clientes")
+click_seguro(driver, wait, "//a[contains(@class,'menuLeaf') and contains(text(),'Mantenimiento de Personas')]", 
+             "Mantenimiento de Personas")
 
 
 # BLOQUE PRINCIPAL
