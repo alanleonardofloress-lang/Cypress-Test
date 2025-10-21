@@ -1,9 +1,9 @@
 # Librerías externas
 # Ajuste de path para ejecución en Jenkins
-import sqlite3
 import logging
 import os
 import random
+import sqlite3
 import sys
 import time
 from datetime import datetime, timedelta
@@ -45,11 +45,11 @@ from selenium_local.helpers.gx_helpers import (
 )
 
 # Cambiar a True si queremos ocultar el navegador
-HEADLESS = True  
+HEADLESS = True
 
 chrome_options = Options()
 
-# Ignorar errores de certificado 
+# Ignorar errores de certificado
 chrome_options.add_argument("--ignore-certificate-errors")
 
 # Solo si se ejecuta sin interfaz
@@ -140,15 +140,21 @@ except Exception as e:
 
 
 # MENÚ PRINCIPAL
-def click_seguro(driver, wait, xpath, descripcion="elemento", max_intentos=3, delay_reintento=1):
+def click_seguro(
+    driver, wait, xpath, descripcion="elemento", max_intentos=3, delay_reintento=1
+):
     for intento in range(1, max_intentos + 1):
         try:
             elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-            driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", elem)
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block: 'center'});", elem
+            )
             time.sleep(0.3)
             try:
                 ActionChains(driver).move_to_element(elem).click().perform()
-                logger.info(f"Intento {intento}: clic en {descripcion} con ActionChains.")
+                logger.info(
+                    f"Intento {intento}: clic en {descripcion} con ActionChains."
+                )
             except:
                 driver.execute_script("arguments[0].click();", elem)
                 logger.info(f"Intento {intento}: clic en {descripcion} con JavaScript.")
@@ -158,16 +164,31 @@ def click_seguro(driver, wait, xpath, descripcion="elemento", max_intentos=3, de
             if intento < max_intentos:
                 time.sleep(delay_reintento)
             else:
-                logger.error(f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos.")
+                logger.error(
+                    f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
+                )
                 return False
 
+
 # invoca las acciones
-click_seguro(driver, wait, "//a[contains(@class,'menuButton') and normalize-space(text())='Inicio']", 
-             "Inicio")
-click_seguro(driver, wait, "//a[contains(@class,'menuItem') and contains(text(),'Menú de Clientes')]", 
-             "Menú de Clientes")
-click_seguro(driver, wait, "//a[contains(@class,'menuLeaf') and contains(text(),'Mantenimiento de Personas')]", 
-             "Mantenimiento de Personas")
+click_seguro(
+    driver,
+    wait,
+    "//a[contains(@class,'menuButton') and normalize-space(text())='Inicio']",
+    "Inicio",
+)
+click_seguro(
+    driver,
+    wait,
+    "//a[contains(@class,'menuItem') and contains(text(),'Menú de Clientes')]",
+    "Menú de Clientes",
+)
+click_seguro(
+    driver,
+    wait,
+    "//a[contains(@class,'menuLeaf') and contains(text(),'Mantenimiento de Personas')]",
+    "Mantenimiento de Personas",
+)
 
 
 # BLOQUE PRINCIPAL
@@ -175,7 +196,9 @@ try:
     driver.switch_to.default_content()
 
     # NUEVO BLOQUE: esperar a que el contenedor procContainer se cargue
-    logger.info("Esperando que se cargue el iframe principal dentro de procContainer...")
+    logger.info(
+        "Esperando que se cargue el iframe principal dentro de procContainer..."
+    )
     wait.until(EC.presence_of_element_located((By.ID, "procContainer")))
     iframe_principal = WebDriverWait(driver, 30).until(
         EC.presence_of_element_located(
@@ -525,7 +548,9 @@ try:
         """,
             confirmar_btn,
         )
-        logger.info("Click forzado por JavaScript en 'Confirmar' ejecutado correctamente.")
+        logger.info(
+            "Click forzado por JavaScript en 'Confirmar' ejecutado correctamente."
+        )
 
 
 except Exception as e:
@@ -689,7 +714,9 @@ def generar_fecha_mayor_a_20_anios():
 def ingresar_fecha_nacimiento(driver):
     try:
         fecha_ddmmaaaa = generar_fecha_mayor_a_20_anios()
-        logger.info(f"Ingresando fecha aleatoria '{fecha_ddmmaaaa}' en el campo vPFFNAC...")
+        logger.info(
+            f"Ingresando fecha aleatoria '{fecha_ddmmaaaa}' en el campo vPFFNAC..."
+        )
 
         campo_fecha = WebDriverWait(driver, 5).until(
             EC.presence_of_element_located((By.ID, "vPFFNAC"))
@@ -1155,7 +1182,9 @@ def seleccionar_nacionalidad_no(driver, wait):
         if valor_final == "N":
             logger.info("Nacionalidad 'No' seleccionada correctamente.")
         else:
-            logger.info(f"Advertencia: el valor final es '{valor_final}' (esperado: 'N').")
+            logger.info(
+                f"Advertencia: el valor final es '{valor_final}' (esperado: 'N')."
+            )
 
     except Exception as e:
         logger.info(f"Error al seleccionar nacionalidad: {e}")
@@ -1481,12 +1510,16 @@ def seleccionar_tipo_documento_cuit(driver, max_reintentos=2):
             time.sleep(1)
 
         except Exception as e:
-            logger.info(f"Error al seleccionar tipo de documento (intento {intentos+1}): {e}")
+            logger.info(
+                f"Error al seleccionar tipo de documento (intento {intentos+1}): {e}"
+            )
             intentos += 1
             time.sleep(1)
 
     # Si llega hasta acá, no logró dejar CUIT seleccionado
-    logger.info("No se pudo confirmar la selección de 'C.U.I.T.' después de varios intentos.")
+    logger.info(
+        "No se pudo confirmar la selección de 'C.U.I.T.' después de varios intentos."
+    )
 
     return False
 
@@ -1632,7 +1665,9 @@ def ingresar_fecha_vencimiento_vDOCFCHVTO(driver):
         if valor_final and valor_final != "  /  /    ":
             logger.info(f"Fecha de vencimiento ingresada correctamente: {valor_final}")
         else:
-            logger.info("La fecha parece no haberse cargado, revisar validación GeneXus.")
+            logger.info(
+                "La fecha parece no haberse cargado, revisar validación GeneXus."
+            )
 
         return fecha_ddmmaaaa
 
@@ -1700,7 +1735,9 @@ def verificar_mensaje_documento_duplicado(driver):
             )
         )
         if mensaje.is_displayed():
-            logger.info("Mensaje detectado: Ya existe el Documento con los datos ingresados.")
+            logger.info(
+                "Mensaje detectado: Ya existe el Documento con los datos ingresados."
+            )
             return True
     except:
         pass
@@ -2636,13 +2673,17 @@ def seleccionar_localidad_valeria_del_mar(driver, max_reintentos=3):
     """
     for intento in range(1, max_reintentos + 1):
         try:
-            logger.info(f"Seleccionando localidad: VALERIA DEL MAR (valor='1833')... (Intento {intento}/{max_reintentos})")
+            logger.info(
+                f"Seleccionando localidad: VALERIA DEL MAR (valor='1833')... (Intento {intento}/{max_reintentos})"
+            )
 
             combo_localidad = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.ID, "vXLOCCOD"))
             )
 
-            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", combo_localidad)
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'center'});", combo_localidad
+            )
             time.sleep(0.3)
             combo_localidad.click()
             time.sleep(0.3)
@@ -2652,7 +2693,8 @@ def seleccionar_localidad_valeria_del_mar(driver, max_reintentos=3):
             time.sleep(0.4)
 
             # Disparar manualmente los eventos GeneXus
-            driver.execute_script("""
+            driver.execute_script(
+                """
                 const el = document.getElementById('vXLOCCOD');
                 el.dispatchEvent(new Event('change', {bubbles:true}));
                 el.dispatchEvent(new Event('blur', {bubbles:true}));
@@ -2660,7 +2702,8 @@ def seleccionar_localidad_valeria_del_mar(driver, max_reintentos=3):
                     if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
                     if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
                 } catch(e) {}
-            """)
+            """
+            )
 
             opcion = select.first_selected_option.text.strip()
             if "VALERIA DEL MAR" in opcion.upper():
@@ -2670,29 +2713,37 @@ def seleccionar_localidad_valeria_del_mar(driver, max_reintentos=3):
                 logger.info(f"Verificar selección (actual: {opcion}). Reintentando...")
 
         except Exception as e:
-            logger.info(f"Error al seleccionar localidad (intento {intento}/{max_reintentos}): {e}")
+            logger.info(
+                f"Error al seleccionar localidad (intento {intento}/{max_reintentos}): {e}"
+            )
 
         # Espera antes de reintentar
         time.sleep(1.5)
 
-    logger.info("No se pudo seleccionar la localidad VALERIA DEL MAR tras varios intentos.")
+    logger.info(
+        "No se pudo seleccionar la localidad VALERIA DEL MAR tras varios intentos."
+    )
     return False
+
 
 # ejecuta el paso de seleccion de localidad
 seleccionar_localidad_valeria_del_mar(driver)
-
 
 
 # Seleccionar opción "OTRO"
 def seleccionar_otro_vFSE005COL(driver, max_intentos=3):
     for intento in range(1, max_intentos + 1):
         try:
-            logger.info(f"Intento {intento}: seleccionando opción 'OTRO' (valor='25500') en vFSE005COL...")
+            logger.info(
+                f"Intento {intento}: seleccionando opción 'OTRO' (valor='25500') en vFSE005COL..."
+            )
 
             combo_otro = WebDriverWait(driver, 20).until(
                 EC.element_to_be_clickable((By.ID, "vFSE005COL"))
             )
-            driver.execute_script("arguments[0].scrollIntoView({block:'center'});", combo_otro)
+            driver.execute_script(
+                "arguments[0].scrollIntoView({block:'center'});", combo_otro
+            )
             time.sleep(0.3)
             combo_otro.click()
             time.sleep(0.3)
@@ -2701,7 +2752,8 @@ def seleccionar_otro_vFSE005COL(driver, max_intentos=3):
             select.select_by_value("25500")
             time.sleep(0.4)
 
-            driver.execute_script("""
+            driver.execute_script(
+                """
                 const el = document.getElementById('vFSE005COL');
                 el.dispatchEvent(new Event('change', {bubbles:true}));
                 el.dispatchEvent(new Event('blur', {bubbles:true}));
@@ -2709,11 +2761,14 @@ def seleccionar_otro_vFSE005COL(driver, max_intentos=3):
                     if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event);
                     if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event);
                 } catch(e) {}
-            """)
+            """
+            )
 
             opcion_final = select.first_selected_option.text.strip()
             if "OTRO" in opcion_final.upper():
-                logger.info(f"Opción seleccionada correctamente en intento {intento}: {opcion_final}")
+                logger.info(
+                    f"Opción seleccionada correctamente en intento {intento}: {opcion_final}"
+                )
                 return
             else:
                 logger.warning(f"Opción incorrecta ({opcion_final}). Reintentando...")
@@ -3203,7 +3258,9 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
         return False
 
     for intento in range(1, max_reintentos + 1):
-        logger.info(f"[Intento {intento}] Click en 'Agregar' dentro de process1_step15...")
+        logger.info(
+            f"[Intento {intento}] Click en 'Agregar' dentro de process1_step15..."
+        )
 
         # 1) Entrar al step15 (contexto correcto para el botón)
         if not entrar_a_step("process1_step15"):
@@ -3270,7 +3327,9 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
             )
             driver.switch_to.frame(root)
         except TimeoutException:
-            logger.info("No pude reingresar al iframe id='1' para validar step siguiente.")
+            logger.info(
+                "No pude reingresar al iframe id='1' para validar step siguiente."
+            )
             continue
 
         logger.info(f"Esperando '{next_iframe}' visible...")
@@ -3293,7 +3352,9 @@ def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reinte
             )
             return True
         else:
-            logger.info("No apareció el step siguiente; reintentamos el click en Agregar.")
+            logger.info(
+                "No apareció el step siguiente; reintentamos el click en Agregar."
+            )
 
     # Si agotó reintentos:
     driver.switch_to.default_content()
@@ -3561,7 +3622,9 @@ def ingresar_dofaxp(driver, valor="AUTOMATION", intentos=3):
             # Confirmar valor en mayúsculas
             current_value = campo.get_attribute("value").strip()
             if current_value == valor.upper():
-                logger.info(f"Verificación OK: '{current_value}' seteado correctamente.")
+                logger.info(
+                    f"Verificación OK: '{current_value}' seteado correctamente."
+                )
                 return
             else:
                 raise Exception(
@@ -4163,9 +4226,6 @@ driver.switch_to.frame(iframe_visible)
 logger.info("Entré correctamente al iframe process1_step21.")
 
 
-
-
-
 # LOG DE DATOS DE CUENTA Y DOCUMENTO EN SQLITE
 
 
@@ -4199,18 +4259,19 @@ def registrar_datos_cuenta(numero_cuenta, numero_documento):
         )
         conn.commit()
         conn.close()
-        logger.info(f"Registro insertado: Cuenta={numero_cuenta}, Documento={numero_documento}")
+        logger.info(
+            f"Registro insertado: Cuenta={numero_cuenta}, Documento={numero_documento}"
+        )
     except Exception as e:
         logger.error(f"Error al registrar datos en logs_cuentas: {e}")
-
 
 
 # Crear tabla si no existe
 inicializar_tabla_logs()
 
 
-
 # Obtener y registrar datos de la cuenta creada
+
 
 def obtener_datos_cuenta_y_documento(driver):
     """
@@ -4223,14 +4284,18 @@ def obtener_datos_cuenta_y_documento(driver):
         cuenta_elem = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "span_vCTNRO"))
         )
-        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", cuenta_elem)
+        driver.execute_script(
+            "arguments[0].scrollIntoView({block:'center'});", cuenta_elem
+        )
         numero_cuenta = cuenta_elem.text.strip()
         logger.info(f"Número de cuenta detectado: {numero_cuenta}")
 
         documento_elem = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "span_vNUMDOC_0001"))
         )
-        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", documento_elem)
+        driver.execute_script(
+            "arguments[0].scrollIntoView({block:'center'});", documento_elem
+        )
         numero_documento = documento_elem.text.strip()
         logger.info(f"Número de documento detectado: {numero_documento}")
 
