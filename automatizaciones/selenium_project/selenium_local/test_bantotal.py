@@ -45,7 +45,7 @@ from selenium_local.helpers.gx_helpers import (
 )
 
 # Cambiar a True si queremos ocultar el navegador
-HEADLESS = False
+HEADLESS = True
 
 chrome_options = Options()
 
@@ -139,95 +139,35 @@ except Exception as e:
     logger.info(f"Error inesperado en el login: {e}")
 
 
-import time
-
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    NoSuchElementException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
-from selenium.webdriver.common.action_chains import ActionChains
-
 # MENÚ PRINCIPAL
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-
-
 def click_seguro(
     driver, wait, xpath, descripcion="elemento", max_intentos=3, delay_reintento=1
 ):
-    """
-    Hace clic en un elemento visible con varios reintentos.
-    Si falla, busca dentro de iframes visibles y vuelve a intentar.
-    """
-
     for intento in range(1, max_intentos + 1):
         try:
-            # --- Reestablecer al contexto principal ---
-            driver.switch_to.default_content()
-
-            # --- Buscar en página principal ---
-            elem = None
-            try:
-                elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-            except TimeoutException:
-                # Si no está, intentar buscar dentro de los iframes visibles
-                iframes = driver.find_elements(By.TAG_NAME, "iframe")
-                for f in iframes:
-                    driver.switch_to.default_content()
-                    driver.switch_to.frame(f)
-                    try:
-                        elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
-                        print(
-                            f"[{descripcion}] encontrado dentro del iframe: {f.get_attribute('name') or f.get_attribute('id')}"
-                        )
-                        break
-                    except TimeoutException:
-                        continue
-
-            # Si no se encontró el elemento en ningún contexto
-            if not elem:
-                raise NoSuchElementException(
-                    f"No se encontró {descripcion} en ningún frame."
-                )
-
-            # --- Scroll y clic ---
+            elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
             driver.execute_script(
                 "arguments[0].scrollIntoView({block: 'center'});", elem
             )
             time.sleep(0.3)
-
             try:
-                ActionChains(driver).move_to_element(elem).pause(0.2).click().perform()
-                print(f"Intento {intento}: clic en {descripcion} con ActionChains.")
-            except ElementClickInterceptedException:
-                driver.execute_script("arguments[0].click();", elem)
-                print(
-                    f"Intento {intento}: clic en {descripcion} con JavaScript (interceptado)."
+                ActionChains(driver).move_to_element(elem).click().perform()
+                logger.info(
+                    f"Intento {intento}: clic en {descripcion} con ActionChains."
                 )
-            except Exception:
+            except:
                 driver.execute_script("arguments[0].click();", elem)
-                print(f"Intento {intento}: fallback JS click en {descripcion}.")
-
-            return True  # clic exitoso
-
-        except (TimeoutException, NoSuchElementException) as e:
-            print(f"Intento {intento}: {descripcion} no visible o inexistente: {e}")
-        except StaleElementReferenceException:
-            print(f"Intento {intento}: {descripcion} quedó obsoleto (stale).")
+                logger.info(f"Intento {intento}: clic en {descripcion} con JavaScript.")
+            return True
         except Exception as e:
-            print(f"Intento {intento}: error inesperado al clicar {descripcion}: {e}")
-
-        # --- Reintento si falla ---
-        if intento < max_intentos:
-            print(f"Reintentando {descripcion} en {delay_reintento}s...")
-            time.sleep(delay_reintento)
-        else:
-            print(
-                f" No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
-            )
-            return False
+            logger.warning(f"Intento {intento} fallido para {descripcion}: {e}")
+            if intento < max_intentos:
+                time.sleep(delay_reintento)
+            else:
+                logger.error(
+                    f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
+                )
+                return False
 
 
 # invoca las acciones
