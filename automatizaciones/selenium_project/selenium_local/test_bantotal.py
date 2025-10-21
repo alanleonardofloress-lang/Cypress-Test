@@ -45,7 +45,7 @@ from selenium_local.helpers.gx_helpers import (
 )
 
 # Cambiar a True si queremos ocultar el navegador
-HEADLESS = True
+HEADLESS = False
 
 chrome_options = Options()
 
@@ -225,7 +225,7 @@ def click_seguro(
             time.sleep(delay_reintento)
         else:
             print(
-                f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
+                f" No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
             )
             return False
 
