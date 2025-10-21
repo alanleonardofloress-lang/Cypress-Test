@@ -139,55 +139,123 @@ except Exception as e:
     logger.info(f"Error inesperado en el login: {e}")
 
 
+import logging
+import time
+
 # MENÚ PRINCIPAL
+from selenium.common.exceptions import (
+    ElementClickInterceptedException,
+    NoSuchElementException,
+    StaleElementReferenceException,
+    TimeoutException,
+)
+from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+
+logger = logging.getLogger(__name__)
+
+
 def click_seguro(
-    driver, wait, xpath, descripcion="elemento", max_intentos=3, delay_reintento=1
+    driver,
+    wait,
+    xpath,
+    descripcion="elemento",
+    max_intentos=3,
+    delay_reintento=1.0,
+    validar_click=False,
 ):
+    """
+    Intenta hacer clic en un elemento visible y clickeable con reintentos.
+    Usa ActionChains y fallback a JavaScript, maneja errores comunes y reubica el elemento.
+    """
+
     for intento in range(1, max_intentos + 1):
         try:
+            # Esperar que el elemento sea clickeable
             elem = wait.until(EC.element_to_be_clickable((By.XPATH, xpath)))
+
+            # Scroll al centro
             driver.execute_script(
                 "arguments[0].scrollIntoView({block: 'center'});", elem
             )
             time.sleep(0.3)
+
             try:
-                ActionChains(driver).move_to_element(elem).click().perform()
+                # Intento con ActionChains (simula interacción real)
+                ActionChains(driver).move_to_element(elem).pause(0.2).click().perform()
                 logger.info(
                     f"Intento {intento}: clic en {descripcion} con ActionChains."
                 )
-            except:
+            except ElementClickInterceptedException:
+                # Reintento con JS si el clic fue bloqueado por otro elemento
                 driver.execute_script("arguments[0].click();", elem)
-                logger.info(f"Intento {intento}: clic en {descripcion} con JavaScript.")
-            return True
-        except Exception as e:
-            logger.warning(f"Intento {intento} fallido para {descripcion}: {e}")
-            if intento < max_intentos:
-                time.sleep(delay_reintento)
-            else:
-                logger.error(
-                    f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
+                logger.info(
+                    f"Intento {intento}: clic en {descripcion} con JavaScript (interceptado)."
                 )
-                return False
+            except Exception as e:
+                # Fallback general
+                driver.execute_script("arguments[0].click();", elem)
+                logger.warning(
+                    f"Intento {intento}: fallback JS click en {descripcion} ({e})."
+                )
+
+            # Validación opcional: confirmar que algo cambió tras el clic
+            if validar_click:
+                time.sleep(0.5)
+                if not elemento_sigue_visible(driver, xpath):
+                    logger.info(f"{descripcion}: clic exitoso confirmado visualmente.")
+                else:
+                    logger.warning(
+                        f"{descripcion}: clic ejecutado pero elemento sigue visible."
+                    )
+            return True
+
+        except (TimeoutException, NoSuchElementException):
+            logger.warning(
+                f"Intento {intento}: no se encontró {descripcion} (Timeout o NoSuchElement)."
+            )
+        except StaleElementReferenceException:
+            logger.warning(
+                f"Intento {intento}: referencia obsoleta (stale element) para {descripcion}."
+            )
+        except Exception as e:
+            logger.warning(
+                f"Intento {intento} fallido para {descripcion}: {type(e).__name__} - {e}"
+            )
+
+        # Reintento
+        if intento < max_intentos:
+            logger.info(f"Reintentando {descripcion} en {delay_reintento}s...")
+            time.sleep(delay_reintento)
+            driver.refresh()  # opcional si el DOM se rompe
+        else:
+            logger.error(
+                f"No se pudo hacer clic en {descripcion} tras {max_intentos} intentos."
+            )
+            return False
+
+
+def elemento_sigue_visible(driver, xpath):
+    """Devuelve True si el elemento sigue visible en pantalla."""
+    try:
+        elem = driver.find_element(By.XPATH, xpath)
+        return elem.is_displayed()
+    except Exception:
+        return False
 
 
 # invoca las acciones
+click_seguro(driver, wait, "//a[normalize-space()='Inicio']", "Inicio")
 click_seguro(
-    driver,
-    wait,
-    "//a[contains(@class,'menuButton') and normalize-space(text())='Inicio']",
-    "Inicio",
+    driver, wait, "//a[contains(text(),'Menú de Clientes')]", "Menú de Clientes"
 )
 click_seguro(
     driver,
     wait,
-    "//a[contains(@class,'menuItem') and contains(text(),'Menú de Clientes')]",
-    "Menú de Clientes",
-)
-click_seguro(
-    driver,
-    wait,
-    "//a[contains(@class,'menuLeaf') and contains(text(),'Mantenimiento de Personas')]",
+    "//a[contains(text(),'Mantenimiento de Personas')]",
     "Mantenimiento de Personas",
+    validar_click=True,
 )
 
 
