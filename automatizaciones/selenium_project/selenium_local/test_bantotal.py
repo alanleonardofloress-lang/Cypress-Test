@@ -3,18 +3,15 @@
 import logging
 import os
 import random
-import sqlite3
 import sys
 import time
 from datetime import datetime, timedelta
 
 from selenium import webdriver
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    NoSuchElementException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
+from selenium.common.exceptions import (ElementClickInterceptedException,
+                                        NoSuchElementException,
+                                        StaleElementReferenceException,
+                                        TimeoutException)
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
@@ -30,22 +27,15 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
 
 # Librerías locales (de mi codigo)
-from selenium_local.helpers import (
-    esperar_y_setear_combo,
-    nivel_educativo_random,
-    set_gx_select,
-)
+from selenium_local.helpers import (esperar_y_setear_combo,
+                                    nivel_educativo_random, set_gx_select)
 from selenium_local.helpers.gx_helpers import (
-    completar_fecha_nacimiento,
-    completar_fecha_nacimiento_click,
-    completar_fecha_nacimiento_input,
-    habilitar_campo_fecha_con_click,
-    ingresar_fecha_nacimiento_manual,
-    intentar_con_reintento,
-)
+    completar_fecha_nacimiento, completar_fecha_nacimiento_click,
+    completar_fecha_nacimiento_input, habilitar_campo_fecha_con_click,
+    ingresar_fecha_nacimiento_manual, intentar_con_reintento)
 
 # Cambiar a True si queremos ocultar el navegador
-HEADLESS = True
+HEADLESS = False
 
 chrome_options = Options()
 
@@ -143,12 +133,10 @@ import logging
 import time
 
 # MENÚ PRINCIPAL
-from selenium.common.exceptions import (
-    ElementClickInterceptedException,
-    NoSuchElementException,
-    StaleElementReferenceException,
-    TimeoutException,
-)
+from selenium.common.exceptions import (ElementClickInterceptedException,
+                                        NoSuchElementException,
+                                        StaleElementReferenceException,
+                                        TimeoutException)
 from selenium.webdriver.common.action_chains import ActionChains
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
@@ -382,89 +370,20 @@ except Exception as e:
     logger.info(f"Error al seleccionar tipo de documento: {e}")
 
 
+# obtener los datos de CUIT
 import logging
-import os
-import sqlite3
+import time
 
-# CONFIGURACIÓN DE BASE LOCAL
+from helpers.google_sheets import (actualizar_datos_cuenta, marcar_leido,
+                                   obtener_cuit_pendiente)
+from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
-
-# Ruta compartida de la base de datos SQLite
-DB_PATH = r"C:\Users\aflores\.jenkins\Compartida_con_test_bantotal\dni_tracker.db"
-
-# Crea la carpeta si no existe (evita errores en Jenkins limpio)
-os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
-
-# Logging (muestra en consola y Jenkins)
+# Logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger(__name__)
-
-logger.info(f"Usando base de datos en: {DB_PATH}")
-logger.info(f"Base de datos SQLite activa en: {DB_PATH}")
-
-
-def inicializar_db():
-    """Crea la base y la tabla tracker si no existen."""
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS tracker (
-            id INTEGER PRIMARY KEY CHECK (id = 1),
-            dni_actual INTEGER NOT NULL
-        )
-    """
-    )
-    # Valor inicial del contador
-    cur.execute("INSERT OR IGNORE INTO tracker (id, dni_actual) VALUES (1, 10000250)")
-    conn.commit()
-    conn.close()
-
-
-def obtener_y_incrementar_dni():
-    """Obtiene el DNI actual y lo incrementa de forma atómica."""
-    conn = sqlite3.connect(DB_PATH, isolation_level="EXCLUSIVE")
-    cur = conn.cursor()
-    cur.execute("BEGIN EXCLUSIVE TRANSACTION")
-    cur.execute("SELECT dni_actual FROM tracker WHERE id = 1")
-    row = cur.fetchone()
-    if not row:
-        raise RuntimeError("No se encontró registro en tracker")
-
-    dni_actual = row[0]
-    nuevo_valor = dni_actual + 1
-    cur.execute("UPDATE tracker SET dni_actual = ? WHERE id = 1", (nuevo_valor,))
-    conn.commit()
-    conn.close()
-
-    logger.info(f"DNI obtenido: {dni_actual} → incrementado a {nuevo_valor}")
-    return dni_actual
-
-
-def calcular_cuit_sin_guiones(prefijo, dni):
-    """Devuelve CUIT sin guiones: PREF(2) + DNI(8) + DV(1)."""
-    pref = int(prefijo)
-    dni_int = int(dni)
-    cuerpo = f"{pref:02d}{dni_int:08d}"
-    pesos = [5, 4, 3, 2, 7, 6, 5, 4, 3, 2]
-    total = sum(int(d) * w for d, w in zip(cuerpo, pesos))
-    resto = total % 11
-    dv = 11 - resto
-    if dv == 11:
-        dv = 0
-    elif dv == 10:
-        dv = 9
-    return f"{cuerpo}{dv}"
-
-
-def generar_cuit_secuencial(socio="Varones"):
-    """Genera un CUIT secuencial único usando la DB local."""
-    pref_map = {"Varones": 20, "Mujeres": 27, "Extranjeros": 23}
-    pref = pref_map.get(socio, 20)
-    dni_usado = obtener_y_incrementar_dni()
-    cuit = calcular_cuit_sin_guiones(pref, dni_usado)
-    logger.info(f"CUIT generado: {cuit} (DNI: {dni_usado}, prefijo: {pref})")
-    return cuit, pref, dni_usado
 
 
 def inyectar_cuit(driver, cuit_no_guiones):
@@ -473,18 +392,14 @@ def inyectar_cuit(driver, cuit_no_guiones):
         pfndoc = WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.ID, "vPFNDOC"))
         )
-
         driver.execute_script(
             "arguments[0].scrollIntoView({block:'center'}); arguments[0].focus();",
             pfndoc,
         )
         time.sleep(0.2)
-
         pfndoc.clear()
         pfndoc.send_keys(cuit_no_guiones)
         time.sleep(0.2)
-
-        # Disparar eventos GX
         driver.execute_script(
             """
             var el = arguments[0];
@@ -494,41 +409,55 @@ def inyectar_cuit(driver, cuit_no_guiones):
         """,
             pfndoc,
         )
-        driver.execute_script(
-            """
-            var el = arguments[0];
-            try { if (window.gx && gx.evt && gx.evt.onchange) gx.evt.onchange(el, event); } catch(e) {}
-            try { if (window.gx && gx.evt && gx.evt.onblur) gx.evt.onblur(el, event); } catch(e) {}
-        """,
-            pfndoc,
-        )
-
         pfndoc.send_keys(Keys.TAB)
         time.sleep(0.5)
-
         val = driver.find_element(By.ID, "vPFNDOC").get_attribute("value")
         logger.info(f"Valor actual en vPFNDOC: {val}")
-
         return val
-
     except Exception as e:
         logger.error(f"Error al inyectar CUIT: {e}")
         driver.save_screenshot("error_inyectar_cuit.png")
         raise
 
 
-# USO PRINCIPAL
+# BUSCA CUIT DE PLANILLA
+valor_final = None  # evita error si no se encontró CUIT
 
 try:
-    inicializar_db()
-    cuit_no_guiones, pref, dni_generado = generar_cuit_secuencial("Varones")
-    logger.info(
-        f"Generado CUIT (sin guiones): {cuit_no_guiones}  (DNI: {dni_generado}, pref: {pref})"
-    )
-    valor_final = inyectar_cuit(driver, cuit_no_guiones)
-    logger.info(f"Valor final en campo: {valor_final}")
-except Exception:
-    logger.exception("Error general en generación/inyección de CUIT:")
+    fila_index, cuit_no_guiones = obtener_cuit_pendiente()
+    if not cuit_no_guiones:
+        logger.warning(
+            "No hay CUIT disponibles con estado pendiente o error en la planilla."
+        )
+    else:
+        logger.info(
+            f"CUIT obtenido desde planilla: {cuit_no_guiones} (fila {fila_index})"
+        )
+        valor_final = inyectar_cuit(driver, cuit_no_guiones)
+        marcar_leido(fila_index, "SI", "CUIT inyectado correctamente")
+        logger.info(f"CUIT {cuit_no_guiones} marcado como leído en la planilla.")
+except Exception as e:
+    logger.exception("Error general al inyectar CUIT desde planilla:")
+    if "fila_index" in locals():
+        marcar_leido(fila_index, "ERROR", str(e))
+
+# fuera del try
+if valor_final:
+    logger.info(f"Alta completada correctamente para CUIT {valor_final}")
+else:
+    logger.warning("No se ejecutó ninguna alta (sin CUIT disponible o error previo).")
+
+
+# llamada a la obtencion de cuit
+# from helpers.cuit_handler import procesar_cuit_desde_planilla
+
+# Dentro del flujo de alta:
+# valor_final = procesar_cuit_desde_planilla(driver)
+
+if valor_final:
+    logger.info(f"CUIT inyectado correctamente: {valor_final}")
+else:
+    logger.warning("No se pudo inyectar CUIT o no había pendientes en la planilla.")
 
 
 # Seleccionar tipo de alta
@@ -3272,11 +3201,9 @@ presionar_boton_telefonos(driver)
 # Click "Agregar" dentro de process1_step15 y esperar
 def click_agregar_en_telefonos(driver, next_iframe="process1_step16", max_reintentos=3):
 
-    from selenium.common.exceptions import (
-        ElementClickInterceptedException,
-        StaleElementReferenceException,
-        TimeoutException,
-    )
+    from selenium.common.exceptions import (ElementClickInterceptedException,
+                                            StaleElementReferenceException,
+                                            TimeoutException)
 
     def esperar_sin_overlay(timeout=10):
         fin = time.time() + timeout
@@ -4294,90 +4221,53 @@ driver.switch_to.frame(iframe_visible)
 logger.info("Entré correctamente al iframe process1_step21.")
 
 
-# LOG DE DATOS DE CUENTA Y DOCUMENTO EN SQLITE
+# LOG DE DATOS DE CUENTA Y DOCUMENTO EN PLANILLA SHEET
+from helpers.google_sheets import actualizar_datos_cuenta
 
 
-def inicializar_tabla_logs():
-    """Crea la tabla logs_cuentas si no existe."""
-    conn = sqlite3.connect(DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
-        """
-        CREATE TABLE IF NOT EXISTS logs_cuentas (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            fecha TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-            numero_cuenta TEXT NOT NULL,
-            numero_documento TEXT NOT NULL
-        )
-        """
-    )
-    conn.commit()
-    conn.close()
-    logger.info("Tabla 'logs_cuentas' lista en la base SQLite.")
-
-
-def registrar_datos_cuenta(numero_cuenta, numero_documento):
-    """Inserta un registro en logs_cuentas."""
-    try:
-        conn = sqlite3.connect(DB_PATH)
-        cur = conn.cursor()
-        cur.execute(
-            "INSERT INTO logs_cuentas (numero_cuenta, numero_documento) VALUES (?, ?)",
-            (numero_cuenta, numero_documento),
-        )
-        conn.commit()
-        conn.close()
-        logger.info(
-            f"Registro insertado: Cuenta={numero_cuenta}, Documento={numero_documento}"
-        )
-    except Exception as e:
-        logger.error(f"Error al registrar datos en logs_cuentas: {e}")
-
-
-# Crear tabla si no existe
-inicializar_tabla_logs()
-
-
-# Obtener y registrar datos de la cuenta creada
-
-
-def obtener_datos_cuenta_y_documento(driver):
+def obtener_datos_cuenta_y_documento(driver, fila_index):
     """
     Obtiene el número de cuenta (span_vCTNRO) y el número de documento (span_vNUMDOC_0001)
-    dentro del iframe actual, y los guarda en la tabla logs_cuentas de la base SQLite.
+    dentro del iframe actual, y los guarda en la planilla de Google Sheets.
     """
     logger.info("Obteniendo datos de la cuenta y del documento...")
 
     try:
+        # Buscar número de cuenta
         cuenta_elem = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "span_vCTNRO"))
         )
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", cuenta_elem
-        )
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", cuenta_elem)
         numero_cuenta = cuenta_elem.text.strip()
         logger.info(f"Número de cuenta detectado: {numero_cuenta}")
 
+        # Buscar número de documento
         documento_elem = WebDriverWait(driver, 15).until(
             EC.presence_of_element_located((By.ID, "span_vNUMDOC_0001"))
         )
-        driver.execute_script(
-            "arguments[0].scrollIntoView({block:'center'});", documento_elem
-        )
+        driver.execute_script("arguments[0].scrollIntoView({block:'center'});", documento_elem)
         numero_documento = documento_elem.text.strip()
         logger.info(f"Número de documento detectado: {numero_documento}")
 
-        # Guardar en la base
-        registrar_datos_cuenta(numero_cuenta, numero_documento)
+        # Actualizar en la planilla Google Sheets
+        actualizar_datos_cuenta(fila_index, numero_cuenta, numero_documento)
+        logger.info(f"Datos de cuenta y documento actualizados en la planilla para fila {fila_index}")
+
         return numero_cuenta, numero_documento
 
     except Exception as e:
-        logger.error(f"Error al obtener datos de cuenta/documento: {e}")
+        logger.error(f"Error al obtener o registrar datos de cuenta/documento: {e}")
         return None, None
 
 
-# invoca el paso anterior
-cuenta, documento = obtener_datos_cuenta_y_documento(driver)
+# (fila_index ya existe desde obtener_cuit_pendiente)
+cuenta, documento = obtener_datos_cuenta_y_documento(driver, fila_index)
+
+if cuenta and documento:
+    logger.info(f"Datos registrados correctamente: Cuenta={cuenta}, Documento={documento}")
+else:
+    logger.warning("No se pudieron obtener o registrar los datos de cuenta/documento.")
+
 
 
 # Hacer clic en botón "Finalizar" (ya dentro del iframe)

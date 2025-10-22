@@ -60,3 +60,6 @@ automatizaciones/selenium_project/log_datos_cuenta.txt
 # Entorno virtual
 venv/
 .env/
+
+
+credentials.json
