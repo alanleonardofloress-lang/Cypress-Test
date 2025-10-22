@@ -43,28 +43,26 @@ pipeline {
         stage('Ejecutar test Selenium') {
             steps {
                 dir('automatizaciones/selenium_project') {
-                    script {
-                        echo "Ejecutando test Bantotal..."
+                    // 👇 Usa la credencial de Jenkins y la copia antes de ejecutar el test
+                    withCredentials([file(credentialsId: 'google-sheets-cred', variable: 'GOOGLE_CRED')]) {
+                        bat """
+                            echo Copiando credencial segura desde Jenkins...
+                            copy "%GOOGLE_CRED%" "selenium_local\\helpers\\credentials.json" /Y
 
-                        // Verificar que el archivo de credenciales exista antes de correr el test
-                        bat "if not exist selenium_local\\helpers\\credentials.json echo ERROR: No se encontró credentials.json && exit /b 1"
+                            echo Ejecutando test Bantotal...
+                            ${env.PYTHON_EXE} selenium_local\\test_bantotal.py > log_bantotal.txt 2>&1
 
-                        // Ejecutar el test y capturar el código de salida
-                        def result = bat(
-                            script: "${env.PYTHON_EXE} selenium_local\\test_bantotal.py > log_bantotal.txt 2>&1",
-                            returnStatus: true
-                        )
+                            echo Verificando resultado del test...
+                            if errorlevel 1 (
+                                echo El test de Selenium falló. Revisar log_bantotal.txt
+                                exit /b 1
+                            ) else (
+                                echo Test Selenium ejecutado correctamente.
+                            )
 
-                        // Verificar el resultado del test
-                        if (result != 0) {
-                            echo "El test de Selenium falló con código ${result}. Revisar log_bantotal.txt"
-                            error("El test falló. Ver detalles en el log.")
-                        } else {
-                            echo "Test Selenium ejecutado correctamente."
-                        }
-
-                        // Mostrar log en consola
-                        bat "type log_bantotal.txt"
+                            echo Mostrando log...
+                            type log_bantotal.txt
+                        """
                     }
                 }
             }
