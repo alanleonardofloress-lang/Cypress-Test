@@ -46,6 +46,9 @@ pipeline {
                     script {
                         echo "Ejecutando test Bantotal..."
 
+                        // Verificar que el archivo de credenciales exista antes de correr el test
+                        bat "if not exist selenium_local\\helpers\\credentials.json echo ERROR: No se encontró credentials.json && exit /b 1"
+
                         // Ejecutar el test y capturar el código de salida
                         def result = bat(
                             script: "${env.PYTHON_EXE} selenium_local\\test_bantotal.py > log_bantotal.txt 2>&1",

@@ -35,7 +35,7 @@ from selenium_local.helpers.gx_helpers import (
     ingresar_fecha_nacimiento_manual, intentar_con_reintento)
 
 # Cambiar a True si queremos ocultar el navegador
-HEADLESS = False
+HEADLESS = True
 
 chrome_options = Options()
 
